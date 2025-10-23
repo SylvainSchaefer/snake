@@ -5,6 +5,8 @@ import model.GameModel;
 import model.Snake;
 import javax.swing.*;
 import java.awt.*;
+import java.util.ArrayList;
+import java.util.Iterator;
 
 /**
  * Vue principale du jeu
@@ -14,10 +16,42 @@ public class GameView extends JPanel implements GameObserver {
     private static final int BOARD_HEIGHT = 800;
     private static final int UNIT_SIZE = 20;
 
+    private static final int MESSAGE_DURATION = 2000; // 2 secondes
+    private static final int MESSAGE_SPACING = 25; // Espacement entre les messages
+
     private GameModel model;
-    private String statusMessage = "";
+    private ArrayList<StatusMessage> statusMessages = new ArrayList<>();
     private boolean showPauseMenu = false;
-    private int absoluteFrameCounter = 0;
+
+    // Classe interne pour gérer les messages avec leur timestamp
+    private static class StatusMessage {
+        String text;
+        long creationTime;
+        float alpha; // Transparence pour l'effet de fondu
+
+        StatusMessage(String text) {
+            this.text = text;
+            this.creationTime = System.currentTimeMillis();
+            this.alpha = 1.0f;
+        }
+
+        // Retourne la transparence actuelle basée sur le temps écoulé
+        float getAlpha() {
+            long elapsed = System.currentTimeMillis() - creationTime;
+            if (elapsed > MESSAGE_DURATION) {
+                return 0f;
+            }
+            // Fondu progressif dans les 500 dernières millisecondes
+            if (elapsed > MESSAGE_DURATION - 500) {
+                return (MESSAGE_DURATION - elapsed) / 500f;
+            }
+            return 1.0f;
+        }
+
+        boolean isExpired() {
+            return System.currentTimeMillis() - creationTime > MESSAGE_DURATION;
+        }
+    }
 
     public GameView(GameModel model) {
         this.model = model;
@@ -26,18 +60,37 @@ public class GameView extends JPanel implements GameObserver {
         setPreferredSize(new Dimension(BOARD_WIDTH, BOARD_HEIGHT));
         setBackground(Color.BLACK);
         setFocusable(true);
+
+        // Timer pour nettoyer les messages expirés et rafraîchir l'affichage
+        Timer cleanupTimer = new Timer(50, e -> {
+            removeExpiredMessages();
+            if (!statusMessages.isEmpty()) {
+                repaint();
+            }
+        });
+        cleanupTimer.start();
+    }
+
+    // Ajoute un nouveau message à la liste
+    private void addStatusMessage(String message) {
+        statusMessages.add(new StatusMessage(message));
+        repaint();
+    }
+
+    // Supprime les messages expirés
+    private void removeExpiredMessages() {
+        Iterator<StatusMessage> iterator = statusMessages.iterator();
+        while (iterator.hasNext()) {
+            if (iterator.next().isExpired()) {
+                iterator.remove();
+            }
+        }
     }
 
     @Override
     protected void paintComponent(Graphics g) {
-        absoluteFrameCounter++;
-
         super.paintComponent(g);
         draw(g);
-
-        // Afficher en haut à droite
-        g.setColor(Color.CYAN);
-        g.setFont(new Font("Arial", Font.BOLD, 20));
     }
 
     private void draw(Graphics g) {
@@ -70,9 +123,9 @@ public class GameView extends JPanel implements GameObserver {
             drawPauseMenu(g);
         }
 
-        // Afficher le message de statut
-        if (!statusMessage.isEmpty()) {
-            drawStatusMessage(g);
+        // Afficher les messages de statut empilés
+        if (!statusMessages.isEmpty()) {
+            drawStatusMessages(g);
         }
     }
 
@@ -251,20 +304,28 @@ public class GameView extends JPanel implements GameObserver {
         g.drawString(instruction, x, BOARD_HEIGHT / 2 + 100);
     }
 
-    private void drawStatusMessage(Graphics g) {
-        g.setColor(Color.YELLOW);
-        g.setFont(new Font("Arial", Font.BOLD, 14));
-        FontMetrics fm = getFontMetrics(g.getFont());
-        int x = (BOARD_WIDTH - fm.stringWidth(statusMessage)) / 2;
-        g.drawString(statusMessage, x, BOARD_HEIGHT - 80);
+    private void drawStatusMessages(Graphics g) {
+        Graphics2D g2d = (Graphics2D) g;
+        g2d.setFont(new Font("Arial", Font.BOLD, 14));
+        FontMetrics fm = g2d.getFontMetrics();
 
-        // Effacer le message après 2 secondes
-        Timer timer = new Timer(2000, e -> {
-            statusMessage = "";
-            // repaint();
-        });
-        timer.setRepeats(false);
-        timer.start();
+        // Dessiner les messages du plus ancien au plus récent (de bas en haut)
+        int yPosition = BOARD_HEIGHT - 80;
+
+        for (int i = statusMessages.size() - 1; i >= 0; i--) {
+            StatusMessage msg = statusMessages.get(i);
+            float alpha = msg.getAlpha();
+
+            if (alpha > 0) {
+                // Appliquer la transparence
+                g2d.setColor(new Color(255, 255, 0, (int) (255 * alpha))); // Jaune avec alpha
+
+                int x = (BOARD_WIDTH - fm.stringWidth(msg.text)) / 2;
+                g2d.drawString(msg.text, x, yPosition);
+
+                yPosition -= MESSAGE_SPACING; // Monter pour le prochain message
+            }
+        }
     }
 
     // Implémentation de GameObserver
@@ -286,13 +347,11 @@ public class GameView extends JPanel implements GameObserver {
 
     @Override
     public void onAppleEaten(String playerName) {
-        statusMessage = playerName + " a mangé la pomme!";
-        // repaint();
+        addStatusMessage(playerName + " a mangé la pomme!");
     }
 
     @Override
     public void onCollision(String playerName) {
-        statusMessage = playerName + " a eu une collision!";
-        // repaint();
+        addStatusMessage(playerName + " a eu une collision!");
     }
 }
