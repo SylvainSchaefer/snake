@@ -1,10 +1,12 @@
 package view;
 
 import observer.GameObserver;
+import model.Direction;
 import model.GameModel;
 import model.Snake;
 import javax.swing.*;
 import java.awt.*;
+import java.awt.geom.Path2D;
 import java.util.ArrayList;
 import java.util.Iterator;
 
@@ -27,12 +29,10 @@ public class GameView extends JPanel implements GameObserver {
     private static class StatusMessage {
         String text;
         long creationTime;
-        float alpha; // Transparence pour l'effet de fondu
 
         StatusMessage(String text) {
             this.text = text;
             this.creationTime = System.currentTimeMillis();
-            this.alpha = 1.0f;
         }
 
         // Retourne la transparence actuelle basée sur le temps écoulé
@@ -148,6 +148,9 @@ public class GameView extends JPanel implements GameObserver {
     }
 
     private void drawSnake(Graphics g, Snake snake, int playerNumber) {
+        Graphics2D g2d = (Graphics2D) g;
+        g2d.setRenderingHint(RenderingHints.KEY_ANTIALIASING, RenderingHints.VALUE_ANTIALIAS_ON);
+
         java.util.List<Point> body = snake.getBody();
         Color baseColor = snake.getColor();
 
@@ -155,39 +158,54 @@ public class GameView extends JPanel implements GameObserver {
             Point segment = body.get(i);
 
             if (i == 0) {
-                // Tête du serpent - plus lumineuse
-                g.setColor(baseColor.brighter());
-                g.fillRoundRect(segment.x, segment.y, UNIT_SIZE, UNIT_SIZE, 5, 5);
+                // Tête du serpent - arrondie selon la direction
+                g2d.setColor(baseColor.brighter());
+                drawRoundedRectangle(g2d, segment.x + 1, segment.y + 1, UNIT_SIZE, UNIT_SIZE,
+                        10, snake.getDirection());
 
                 // Dessiner les yeux
-                g.setColor(Color.WHITE);
+                g2d.setColor(Color.WHITE);
                 int eyeSize = 4;
                 int eyeOffset = 4;
 
                 switch (snake.getDirection()) {
                     case UP:
-                        g.fillOval(segment.x + eyeOffset, segment.y + eyeOffset, eyeSize, eyeSize);
-                        g.fillOval(segment.x + UNIT_SIZE - eyeOffset - eyeSize, segment.y + eyeOffset, eyeSize,
+                        g2d.fillOval(segment.x + eyeOffset, segment.y + eyeOffset, eyeSize, eyeSize);
+                        g2d.fillOval(segment.x + UNIT_SIZE - eyeOffset - eyeSize, segment.y + eyeOffset, eyeSize,
                                 eyeSize);
                         break;
                     case DOWN:
-                        g.fillOval(segment.x + eyeOffset, segment.y + UNIT_SIZE - eyeOffset - eyeSize, eyeSize,
+                        g2d.fillOval(segment.x + eyeOffset, segment.y + UNIT_SIZE - eyeOffset - eyeSize, eyeSize,
                                 eyeSize);
-                        g.fillOval(segment.x + UNIT_SIZE - eyeOffset - eyeSize,
+                        g2d.fillOval(segment.x + UNIT_SIZE - eyeOffset - eyeSize,
                                 segment.y + UNIT_SIZE - eyeOffset - eyeSize, eyeSize, eyeSize);
                         break;
                     case LEFT:
-                        g.fillOval(segment.x + eyeOffset, segment.y + eyeOffset, eyeSize, eyeSize);
-                        g.fillOval(segment.x + eyeOffset, segment.y + UNIT_SIZE - eyeOffset - eyeSize, eyeSize,
+                        g2d.fillOval(segment.x + eyeOffset, segment.y + eyeOffset, eyeSize, eyeSize);
+                        g2d.fillOval(segment.x + eyeOffset, segment.y + UNIT_SIZE - eyeOffset - eyeSize, eyeSize,
                                 eyeSize);
                         break;
                     case RIGHT:
-                        g.fillOval(segment.x + UNIT_SIZE - eyeOffset - eyeSize, segment.y + eyeOffset, eyeSize,
+                        g2d.fillOval(segment.x + UNIT_SIZE - eyeOffset - eyeSize, segment.y + eyeOffset, eyeSize,
                                 eyeSize);
-                        g.fillOval(segment.x + UNIT_SIZE - eyeOffset - eyeSize,
+                        g2d.fillOval(segment.x + UNIT_SIZE - eyeOffset - eyeSize,
                                 segment.y + UNIT_SIZE - eyeOffset - eyeSize, eyeSize, eyeSize);
                         break;
                 }
+            } else if (i == body.size() - 1) {
+                // Queue du serpent - arrondie du côté opposé à la direction
+                float ratio = (float) i / body.size();
+                Color segmentColor = new Color(
+                        (int) (baseColor.getRed() * (1 - ratio * 0.3)),
+                        (int) (baseColor.getGreen() * (1 - ratio * 0.3)),
+                        (int) (baseColor.getBlue() * (1 - ratio * 0.3)));
+                g2d.setColor(segmentColor);
+
+                // Déterminer la direction de la queue (opposée au segment précédent)
+                Point prevSegment = body.get(i - 1);
+                Direction tailDirection = getTailDirection(segment, prevSegment);
+                drawRoundedRectangle(g2d, segment.x + 1, segment.y + 1, UNIT_SIZE, UNIT_SIZE,
+                        10, tailDirection);
             } else {
                 // Corps du serpent - gradient
                 float ratio = (float) i / body.size();
@@ -195,10 +213,68 @@ public class GameView extends JPanel implements GameObserver {
                         (int) (baseColor.getRed() * (1 - ratio * 0.3)),
                         (int) (baseColor.getGreen() * (1 - ratio * 0.3)),
                         (int) (baseColor.getBlue() * (1 - ratio * 0.3)));
-                g.setColor(segmentColor);
-                g.fillRect(segment.x + 1, segment.y + 1, UNIT_SIZE - 2, UNIT_SIZE - 2);
+                g2d.setColor(segmentColor);
+                g2d.fillRect(segment.x + 1, segment.y + 1, UNIT_SIZE, UNIT_SIZE);
             }
         }
+    }
+
+    // Dessine un rectangle arrondi pour la tête et la queue
+    private void drawRoundedRectangle(Graphics2D g2d, int x, int y, int width, int height,
+            int arcSize, Direction direction) {
+        Path2D path = new Path2D.Float();
+
+        switch (direction) {
+            case UP:
+                // Arrondi en haut
+                path.moveTo(x, y + height);
+                path.lineTo(x, y + arcSize);
+                path.quadTo(x, y, x + arcSize, y);
+                path.lineTo(x + width - arcSize, y);
+                path.quadTo(x + width, y, x + width, y + arcSize);
+                path.lineTo(x + width, y + height);
+                break;
+            case DOWN:
+                // Arrondi en bas
+                path.moveTo(x, y);
+                path.lineTo(x, y + height - arcSize);
+                path.quadTo(x, y + height, x + arcSize, y + height);
+                path.lineTo(x + width - arcSize, y + height);
+                path.quadTo(x + width, y + height, x + width, y + height - arcSize);
+                path.lineTo(x + width, y);
+                break;
+            case LEFT:
+                // Arrondi à gauche
+                path.moveTo(x + width, y);
+                path.lineTo(x + arcSize, y);
+                path.quadTo(x, y, x, y + arcSize);
+                path.lineTo(x, y + height - arcSize);
+                path.quadTo(x, y + height, x + arcSize, y + height);
+                path.lineTo(x + width, y + height);
+                break;
+            case RIGHT:
+                // Arrondi à droite
+                path.moveTo(x, y);
+                path.lineTo(x + width - arcSize, y);
+                path.quadTo(x + width, y, x + width, y + arcSize);
+                path.lineTo(x + width, y + height - arcSize);
+                path.quadTo(x + width, y + height, x + width - arcSize, y + height);
+                path.lineTo(x, y + height);
+                break;
+        }
+        path.closePath();
+        g2d.fill(path);
+    }
+
+    // Détermine la direction de la queue basée sur la position relative
+    private Direction getTailDirection(Point tail, Point beforeTail) {
+        if (tail.x < beforeTail.x)
+            return Direction.LEFT;
+        if (tail.x > beforeTail.x)
+            return Direction.RIGHT;
+        if (tail.y < beforeTail.y)
+            return Direction.UP;
+        return Direction.DOWN;
     }
 
     private void drawScores(Graphics g) {
