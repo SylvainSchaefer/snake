@@ -87,7 +87,7 @@ public class GameController {
         setupGameControls();
 
         // Initialiser le jeu
-        gameModel.initGame(player1, player2);
+        gameModel.initGame(player1, player2, gameView.getWidth(), gameView.getHeight());
 
         // Observer pour détecter la fin du jeu
         gameModel.addObserver(new GameObserver() {
@@ -118,7 +118,7 @@ public class GameController {
         // Timer pour la LOGIQUE du jeu (10 FPS)
         gameTimer = new Timer(GAME_DELAY, e -> {
             if (gameModel != null) {
-                gameModel.update();
+                gameModel.update(gameView.getWidth(), gameView.getHeight());
             }
         });
         gameTimer.setCoalesce(false);
@@ -306,7 +306,7 @@ public class GameController {
                 // Timer pour la LOGIQUE du jeu (10 FPS)
                 gameTimer = new Timer(GAME_DELAY, e -> {
                     if (gameModel != null) {
-                        gameModel.update();
+                        gameModel.update(gameView.getWidth(), gameView.getHeight());
                     }
                 });
                 gameTimer.setCoalesce(false);

@@ -11,7 +11,6 @@ import java.util.List;
  */
 public class Snake implements Serializable {
     private static final long serialVersionUID = 1L;
-    public static final int UNIT_SIZE = 20;
     private static final int INITIAL_SIZE = 3;
 
     private List<Point> body;
@@ -19,7 +18,7 @@ public class Snake implements Serializable {
     private Color color;
     private boolean growing;
 
-    public Snake(int x, int y, Color color, Direction initialDirection) {
+    public Snake(int x, int y, Color color, Direction initialDirection, int unitSize) {
         this.color = color;
         this.direction = initialDirection;
         this.body = new ArrayList<>();
@@ -27,13 +26,13 @@ public class Snake implements Serializable {
 
         // Initialiser le corps du serpent
         for (int i = 0; i < INITIAL_SIZE; i++) {
-            body.add(new Point(x - i * UNIT_SIZE * initialDirection.getDx(),
-                    y - i * UNIT_SIZE * initialDirection.getDy()));
+            body.add(new Point(x - i * unitSize * initialDirection.getDx(),
+                    y - i * unitSize * initialDirection.getDy()));
         }
     }
 
-    public void move() {
-        Point newHead = getNextPosition(direction);
+    public void move(int unitSize) {
+        Point newHead = getNextPosition(direction, unitSize);
         body.add(0, newHead);
 
         if (!growing) {
@@ -43,10 +42,10 @@ public class Snake implements Serializable {
         }
     }
 
-    public Point getNextPosition(Direction dir) {
+    public Point getNextPosition(Direction dir, int unitSize) {
         Point head = getHead();
-        return new Point(head.x + dir.getDx() * UNIT_SIZE,
-                head.y + dir.getDy() * UNIT_SIZE);
+        return new Point(head.x + dir.getDx() * unitSize,
+                head.y + dir.getDy() * unitSize);
     }
 
     public void grow() {
@@ -63,10 +62,10 @@ public class Snake implements Serializable {
         return false;
     }
 
-    public boolean checkWallCollision(int width, int height) {
+    public boolean checkWallCollision(int width, int height, int unitSize) {
         Point head = getHead();
         return head.x < 0 || head.x >= width ||
-                head.y < 2 * UNIT_SIZE || head.y >= height - 2 * UNIT_SIZE;
+                head.y < 2 * unitSize || head.y >= height - 2 * unitSize;
     }
 
     public boolean occupies(int x, int y) {
@@ -87,13 +86,13 @@ public class Snake implements Serializable {
         return false;
     }
 
-    public void respawn(int x, int y, Direction newDirection) {
+    public void respawn(int x, int y, Direction newDirection, int unitSize) {
         body.clear();
         this.direction = newDirection;
 
         for (int i = 0; i < INITIAL_SIZE; i++) {
-            body.add(new Point(x - i * UNIT_SIZE * newDirection.getDx(),
-                    y - i * UNIT_SIZE * newDirection.getDy()));
+            body.add(new Point(x - i * unitSize * newDirection.getDx(),
+                    y - i * unitSize * newDirection.getDy()));
         }
     }
 

@@ -16,7 +16,6 @@ import java.util.Iterator;
 public class GameView extends JPanel implements GameObserver {
     private static final int BOARD_WIDTH = 800;
     private static final int BOARD_HEIGHT = 800;
-    private static final int UNIT_SIZE = 20;
 
     private static final int MESSAGE_DURATION = 2000; // 2 secondes
     private static final int MESSAGE_SPACING = 25; // Espacement entre les messages
@@ -94,60 +93,67 @@ public class GameView extends JPanel implements GameObserver {
     }
 
     private void draw(Graphics g) {
+        int bordWidth = this.getWidth();
+        int bordHeight = this.getHeight();
+
+        int minSize = bordWidth < bordHeight ? bordWidth : bordHeight;
+
+        int unitSize = minSize / 40; // 40 cases dans la grille
+
         if (model == null || !model.isRunning()) {
-            drawGameOver(g);
+            drawGameOver(g, bordWidth, bordHeight);
             return;
         }
 
         // Dessiner la grille (optionnel)
-        drawGrid(g);
+        drawGrid(g, unitSize, bordWidth, bordHeight);
 
         // Dessiner la pomme
         if (model.getApple() != null) {
-            drawApple(g, model.getApple());
+            drawApple(g, model.getApple(), unitSize);
         }
 
         // Dessiner les serpents
         if (model.getSnake1() != null) {
-            drawSnake(g, model.getSnake1(), 1);
+            drawSnake(g, model.getSnake1(), 1, unitSize);
         }
         if (model.getSnake2() != null) {
-            drawSnake(g, model.getSnake2(), 2);
+            drawSnake(g, model.getSnake2(), 2, unitSize);
         }
 
         // Afficher les scores et infos
-        drawScores(g);
+        drawScores(g, bordWidth);
 
         // Afficher le menu pause si nécessaire
         if (showPauseMenu) {
-            drawPauseMenu(g);
+            drawPauseMenu(g, bordWidth, bordHeight);
         }
 
         // Afficher les messages de statut empilés
         if (!statusMessages.isEmpty()) {
-            drawStatusMessages(g);
+            drawStatusMessages(g, bordWidth, bordHeight);
         }
     }
 
-    private void drawGrid(Graphics g) {
+    private void drawGrid(Graphics g, int unitSize, int boardWidth, int bordHeight) {
         g.setColor(new Color(40, 40, 40));
-        for (int i = 0; i < BOARD_HEIGHT / UNIT_SIZE; i++) {
-            g.drawLine(i * UNIT_SIZE, 0, i * UNIT_SIZE, BOARD_HEIGHT);
-            g.drawLine(0, i * UNIT_SIZE, BOARD_WIDTH, i * UNIT_SIZE);
+        for (int i = 0; i < (bordHeight > boardWidth ? bordHeight : boardWidth) / unitSize; i++) {
+            g.drawLine(i * unitSize, 0, i * unitSize, bordHeight);
+            g.drawLine(0, i * unitSize, boardWidth, i * unitSize);
         }
     }
 
-    private void drawApple(Graphics g, Point apple) {
+    private void drawApple(Graphics g, Point apple, int unitSize) {
         // Dessiner une pomme plus jolie
         g.setColor(Color.RED);
-        g.fillOval(apple.x + 2, apple.y + 2, UNIT_SIZE - 4, UNIT_SIZE - 4);
+        g.fillOval(apple.x + 2, apple.y + 2, unitSize - 4, unitSize - 4);
 
         // Petite feuille
         g.setColor(Color.GREEN);
-        g.fillRect(apple.x + UNIT_SIZE / 2 - 1, apple.y, 2, 4);
+        g.fillRect(apple.x + unitSize / 2 - 1, apple.y, 2, 4);
     }
 
-    private void drawSnake(Graphics g, Snake snake, int playerNumber) {
+    private void drawSnake(Graphics g, Snake snake, int playerNumber, int unitSize) {
         Graphics2D g2d = (Graphics2D) g;
         g2d.setRenderingHint(RenderingHints.KEY_ANTIALIASING, RenderingHints.VALUE_ANTIALIAS_ON);
 
@@ -160,7 +166,7 @@ public class GameView extends JPanel implements GameObserver {
             if (i == 0) {
                 // Tête du serpent - arrondie selon la direction
                 g2d.setColor(baseColor.brighter());
-                drawRoundedRectangle(g2d, segment.x + 1, segment.y + 1, UNIT_SIZE, UNIT_SIZE,
+                drawRoundedRectangle(g2d, segment.x + 1, segment.y + 1, unitSize, unitSize,
                         10, snake.getDirection());
 
                 // Dessiner les yeux
@@ -171,25 +177,25 @@ public class GameView extends JPanel implements GameObserver {
                 switch (snake.getDirection()) {
                     case UP:
                         g2d.fillOval(segment.x + eyeOffset, segment.y + eyeOffset, eyeSize, eyeSize);
-                        g2d.fillOval(segment.x + UNIT_SIZE - eyeOffset - eyeSize, segment.y + eyeOffset, eyeSize,
+                        g2d.fillOval(segment.x + unitSize - eyeOffset - eyeSize, segment.y + eyeOffset, eyeSize,
                                 eyeSize);
                         break;
                     case DOWN:
-                        g2d.fillOval(segment.x + eyeOffset, segment.y + UNIT_SIZE - eyeOffset - eyeSize, eyeSize,
+                        g2d.fillOval(segment.x + eyeOffset, segment.y + unitSize - eyeOffset - eyeSize, eyeSize,
                                 eyeSize);
-                        g2d.fillOval(segment.x + UNIT_SIZE - eyeOffset - eyeSize,
-                                segment.y + UNIT_SIZE - eyeOffset - eyeSize, eyeSize, eyeSize);
+                        g2d.fillOval(segment.x + unitSize - eyeOffset - eyeSize,
+                                segment.y + unitSize - eyeOffset - eyeSize, eyeSize, eyeSize);
                         break;
                     case LEFT:
                         g2d.fillOval(segment.x + eyeOffset, segment.y + eyeOffset, eyeSize, eyeSize);
-                        g2d.fillOval(segment.x + eyeOffset, segment.y + UNIT_SIZE - eyeOffset - eyeSize, eyeSize,
+                        g2d.fillOval(segment.x + eyeOffset, segment.y + unitSize - eyeOffset - eyeSize, eyeSize,
                                 eyeSize);
                         break;
                     case RIGHT:
-                        g2d.fillOval(segment.x + UNIT_SIZE - eyeOffset - eyeSize, segment.y + eyeOffset, eyeSize,
+                        g2d.fillOval(segment.x + unitSize - eyeOffset - eyeSize, segment.y + eyeOffset, eyeSize,
                                 eyeSize);
-                        g2d.fillOval(segment.x + UNIT_SIZE - eyeOffset - eyeSize,
-                                segment.y + UNIT_SIZE - eyeOffset - eyeSize, eyeSize, eyeSize);
+                        g2d.fillOval(segment.x + unitSize - eyeOffset - eyeSize,
+                                segment.y + unitSize - eyeOffset - eyeSize, eyeSize, eyeSize);
                         break;
                 }
             } else if (i == body.size() - 1) {
@@ -204,7 +210,7 @@ public class GameView extends JPanel implements GameObserver {
                 // Déterminer la direction de la queue (opposée au segment précédent)
                 Point prevSegment = body.get(i - 1);
                 Direction tailDirection = getTailDirection(segment, prevSegment);
-                drawRoundedRectangle(g2d, segment.x + 1, segment.y + 1, UNIT_SIZE, UNIT_SIZE,
+                drawRoundedRectangle(g2d, segment.x + 1, segment.y + 1, unitSize, unitSize,
                         10, tailDirection);
             } else {
                 // Corps du serpent - gradient
@@ -214,7 +220,7 @@ public class GameView extends JPanel implements GameObserver {
                         (int) (baseColor.getGreen() * (1 - ratio * 0.3)),
                         (int) (baseColor.getBlue() * (1 - ratio * 0.3)));
                 g2d.setColor(segmentColor);
-                g2d.fillRect(segment.x + 1, segment.y + 1, UNIT_SIZE, UNIT_SIZE);
+                g2d.fillRect(segment.x + 1, segment.y + 1, unitSize, unitSize);
             }
         }
     }
@@ -277,10 +283,10 @@ public class GameView extends JPanel implements GameObserver {
         return Direction.DOWN;
     }
 
-    private void drawScores(Graphics g) {
+    private void drawScores(Graphics g, int bordWidth) {
         // Zone de score avec fond semi-transparent
         g.setColor(new Color(0, 0, 0, 150));
-        g.fillRect(0, 0, BOARD_WIDTH, 40);
+        g.fillRect(0, 0, bordWidth, 40);
 
         // Scores
         g.setColor(Color.WHITE);
@@ -290,7 +296,7 @@ public class GameView extends JPanel implements GameObserver {
         String player2Name = model.getPlayer2() != null ? model.getPlayer2().getName() : "Joueur 2";
 
         g.drawString(player1Name + ": " + model.getPlayer1Score(), 10, 25);
-        g.drawString(player2Name + ": " + model.getPlayer2Score(), BOARD_WIDTH - 150, 25);
+        g.drawString(player2Name + ": " + model.getPlayer2Score(), bordWidth - 150, 25);
 
         // Longueur des serpents
         g.setFont(new Font("Arial", Font.PLAIN, 12));
@@ -299,22 +305,22 @@ public class GameView extends JPanel implements GameObserver {
             g.drawString("Taille: " + model.getSnake1().getLength(), 10, 38);
         }
         if (model.getSnake2() != null) {
-            g.drawString("Taille: " + model.getSnake2().getLength(), BOARD_WIDTH - 150, 38);
+            g.drawString("Taille: " + model.getSnake2().getLength(), bordWidth - 150, 38);
         }
     }
 
-    private void drawPauseMenu(Graphics g) {
+    private void drawPauseMenu(Graphics g, int bordWidth, int bordHeight) {
         // Fond semi-transparent
         g.setColor(new Color(0, 0, 0, 200));
-        g.fillRect(0, 0, BOARD_WIDTH, BOARD_HEIGHT);
+        g.fillRect(0, 0, bordWidth, bordHeight);
 
         // Texte PAUSE
         g.setColor(Color.YELLOW);
         g.setFont(new Font("Arial", Font.BOLD, 48));
         String pauseText = "PAUSE";
         FontMetrics fm = getFontMetrics(g.getFont());
-        int x = (BOARD_WIDTH - fm.stringWidth(pauseText)) / 2;
-        g.drawString(pauseText, x, BOARD_HEIGHT / 2 - 50);
+        int x = (bordWidth - fm.stringWidth(pauseText)) / 2;
+        g.drawString(pauseText, x, bordHeight / 2 - 50);
 
         // Instructions
         g.setColor(Color.WHITE);
@@ -328,23 +334,23 @@ public class GameView extends JPanel implements GameObserver {
 
         for (int i = 0; i < instructions.length; i++) {
             fm = getFontMetrics(g.getFont());
-            x = (BOARD_WIDTH - fm.stringWidth(instructions[i])) / 2;
-            g.drawString(instructions[i], x, BOARD_HEIGHT / 2 + 20 + (i * 30));
+            x = (bordWidth - fm.stringWidth(instructions[i])) / 2;
+            g.drawString(instructions[i], x, bordHeight / 2 + 20 + (i * 30));
         }
     }
 
-    private void drawGameOver(Graphics g) {
+    private void drawGameOver(Graphics g, int bordWidth, int bordHeight) {
         // Fond
         g.setColor(Color.BLACK);
-        g.fillRect(0, 0, BOARD_WIDTH, BOARD_HEIGHT);
+        g.fillRect(0, 0, bordWidth, bordHeight);
 
         // Titre Game Over
         g.setColor(Color.RED);
         g.setFont(new Font("Arial", Font.BOLD, 48));
         String gameOver = "GAME OVER";
         FontMetrics fm = getFontMetrics(g.getFont());
-        int x = (BOARD_WIDTH - fm.stringWidth(gameOver)) / 2;
-        g.drawString(gameOver, x, BOARD_HEIGHT / 2 - 100);
+        int x = (bordWidth - fm.stringWidth(gameOver)) / 2;
+        g.drawString(gameOver, x, bordHeight / 2 - 100);
 
         // Gagnant
         g.setColor(Color.YELLOW);
@@ -360,8 +366,8 @@ public class GameView extends JPanel implements GameObserver {
         }
 
         fm = getFontMetrics(g.getFont());
-        x = (BOARD_WIDTH - fm.stringWidth(winner)) / 2;
-        g.drawString(winner, x, BOARD_HEIGHT / 2);
+        x = (bordWidth - fm.stringWidth(winner)) / 2;
+        g.drawString(winner, x, bordHeight / 2);
 
         // Scores finaux
         g.setColor(Color.WHITE);
@@ -369,24 +375,24 @@ public class GameView extends JPanel implements GameObserver {
 
         String finalScore = "Score final: " + model.getPlayer1Score() + " - " + model.getPlayer2Score();
         fm = getFontMetrics(g.getFont());
-        x = (BOARD_WIDTH - fm.stringWidth(finalScore)) / 2;
-        g.drawString(finalScore, x, BOARD_HEIGHT / 2 + 50);
+        x = (bordWidth - fm.stringWidth(finalScore)) / 2;
+        g.drawString(finalScore, x, bordHeight / 2 + 50);
 
         // Instruction
         g.setFont(new Font("Arial", Font.PLAIN, 16));
         String instruction = "Appuyez sur ESPACE pour retourner au menu";
         fm = getFontMetrics(g.getFont());
-        x = (BOARD_WIDTH - fm.stringWidth(instruction)) / 2;
-        g.drawString(instruction, x, BOARD_HEIGHT / 2 + 100);
+        x = (bordWidth - fm.stringWidth(instruction)) / 2;
+        g.drawString(instruction, x, bordHeight / 2 + 100);
     }
 
-    private void drawStatusMessages(Graphics g) {
+    private void drawStatusMessages(Graphics g, int bordWidth, int bordHeight) {
         Graphics2D g2d = (Graphics2D) g;
         g2d.setFont(new Font("Arial", Font.BOLD, 14));
         FontMetrics fm = g2d.getFontMetrics();
 
         // Dessiner les messages du plus ancien au plus récent (de bas en haut)
-        int yPosition = BOARD_HEIGHT - 80;
+        int yPosition = bordHeight - 80;
 
         for (int i = statusMessages.size() - 1; i >= 0; i--) {
             StatusMessage msg = statusMessages.get(i);
@@ -396,7 +402,7 @@ public class GameView extends JPanel implements GameObserver {
                 // Appliquer la transparence
                 g2d.setColor(new Color(255, 255, 0, (int) (255 * alpha))); // Jaune avec alpha
 
-                int x = (BOARD_WIDTH - fm.stringWidth(msg.text)) / 2;
+                int x = (bordWidth - fm.stringWidth(msg.text)) / 2;
                 g2d.drawString(msg.text, x, yPosition);
 
                 yPosition -= MESSAGE_SPACING; // Monter pour le prochain message

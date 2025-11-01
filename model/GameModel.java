@@ -14,9 +14,6 @@ import java.util.Random;
  */
 public class GameModel extends Observable implements Serializable {
     private static final long serialVersionUID = 1L;
-    public static final int BOARD_WIDTH = 800;
-    public static final int BOARD_HEIGHT = 800;
-    public static final int UNIT_SIZE = 20;
 
     private Snake snake1;
     private Snake snake2;
@@ -35,20 +32,22 @@ public class GameModel extends Observable implements Serializable {
         this.paused = false;
     }
 
-    public void initGame(Player player1, Player player2) {
+    public void initGame(Player player1, Player player2, int boardWidth, int boardHeight) {
         this.player1 = player1;
         this.player2 = player2;
 
+        int unitSize = (boardWidth < boardHeight ? boardWidth : boardHeight) / 40;
+
         // Initialiser les serpents
-        snake1 = new Snake(100, 100, Color.GREEN, Direction.RIGHT);
-        snake2 = new Snake(400, 400, Color.BLUE, Direction.LEFT);
+        snake1 = new Snake(100, 100, Color.GREEN, Direction.RIGHT, unitSize);
+        snake2 = new Snake(400, 400, Color.BLUE, Direction.LEFT, unitSize);
 
         // Initialiser les scores
         player1Score = 0;
         player2Score = 0;
 
         // Placer la première pomme
-        generateNewApple();
+        generateNewApple(boardWidth, boardHeight);
 
         running = true;
         paused = false;
@@ -56,29 +55,31 @@ public class GameModel extends Observable implements Serializable {
         notifyGameStateChange(GameObserver.GameState.PLAYING);
     }
 
-    public void update() {
+    public void update(int boardWidth, int boardHeight) {
         if (!running || paused)
             return;
+
+        int unitSize = (boardWidth < boardHeight ? boardWidth : boardHeight) / 40;
 
         // Enlever les commentaires pour tester les perfs
         // long start = System.nanoTime();
 
         // long t1 = System.nanoTime();
-        player1.updateDirection(snake1, apple, BOARD_WIDTH, BOARD_HEIGHT);
-        player2.updateDirection(snake2, apple, BOARD_WIDTH, BOARD_HEIGHT);
+        player1.updateDirection(snake1, apple, boardWidth, boardHeight);
+        player2.updateDirection(snake2, apple, boardWidth, boardHeight);
         // long t2 = System.nanoTime();
 
-        snake1.move();
-        snake2.move();
+        snake1.move(unitSize);
+        snake2.move(unitSize);
         // long t3 = System.nanoTime();
 
         notifySnakeMove();
         // long t4 = System.nanoTime();
 
-        checkAppleCollisions();
+        checkAppleCollisions(boardWidth, boardHeight);
         // long t5 = System.nanoTime();
 
-        checkCollisions();
+        checkCollisions(boardWidth, boardHeight);
         // long t6 = System.nanoTime();
 
         /*
@@ -98,18 +99,22 @@ public class GameModel extends Observable implements Serializable {
          */
     }
 
-    private void checkAppleCollisions() {
+    private void checkAppleCollisions(int boardWidth, int boardHeight) {
         boolean newAppleNeeded = false;
 
-        if (snake1.getHead().equals(apple)) {
-            snake1.grow();
+        int unitSize = (boardWidth < boardHeight ? boardWidth : boardHeight) / 40;
+
+        if (snake1.getHead().equals(apple) || (Math.abs(snake1.getHead().getX() - apple.getX()) < unitSize
+                && Math.abs(snake1.getHead().getY() - apple.getY()) < unitSize)) {
             player1Score++;
             notifyAppleEaten(player1.getName());
             notifyScoreUpdate(player1Score, player2Score);
             newAppleNeeded = true;
         }
 
-        if (snake2.getHead().equals(apple)) {
+        if (snake2.getHead().equals(apple)
+                || (Math.abs(snake2.getHead().getX() - apple.getX()) < unitSize
+                        && Math.abs(snake2.getHead().getY() - apple.getY()) < unitSize)) {
             snake2.grow();
             player2Score++;
             notifyAppleEaten(player2.getName());
@@ -118,47 +123,53 @@ public class GameModel extends Observable implements Serializable {
         }
 
         if (newAppleNeeded) {
-            generateNewApple();
+            generateNewApple(boardWidth, boardHeight);
         }
     }
 
-    private void checkCollisions() {
+    private void checkCollisions(int boardWidth, int boardHeight) {
+        int unitSize = (boardWidth < boardHeight ? boardWidth : boardHeight) / 40;
         // Vérifier les collisions du serpent 1
-        if (snake1.checkSelfCollision() || snake1.checkWallCollision(BOARD_WIDTH, BOARD_HEIGHT)) {
+        if (snake1.checkSelfCollision() || snake1.checkWallCollision(boardWidth, boardHeight, unitSize)) {
             player2Score += 5;
             notifyCollision(player1.getName());
             notifyScoreUpdate(player1Score, player2Score);
-            respawnSnake(snake1);
+            respawnSnake(snake1, boardWidth, boardHeight);
         }
 
         // Vérifier les collisions du serpent 2
-        if (snake2.checkSelfCollision() || snake2.checkWallCollision(BOARD_WIDTH, BOARD_HEIGHT)) {
+        if (snake2.checkSelfCollision() || snake2.checkWallCollision(boardWidth, boardHeight, unitSize)) {
             player1Score += 5;
             notifyCollision(player2.getName());
             notifyScoreUpdate(player1Score, player2Score);
-            respawnSnake(snake2);
+            respawnSnake(snake2, boardWidth, boardHeight);
         }
     }
 
-    private void respawnSnake(Snake snake) {
+    private void respawnSnake(Snake snake, int boardWidth, int boardHeight) {
         int x, y;
         Direction[] directions = Direction.values();
         Direction newDirection;
+        int unitSize = (boardWidth < boardHeight ? boardWidth : boardHeight) / 40;
 
-        x = (random.nextInt(BOARD_WIDTH / UNIT_SIZE - 6) + 3) * UNIT_SIZE;
-        y = (random.nextInt(BOARD_HEIGHT / UNIT_SIZE - 6) + 3) * UNIT_SIZE;
+        x = (random.nextInt(boardWidth / unitSize - 6) + 3) * unitSize;
+        y = (random.nextInt(boardHeight / unitSize - 6) + 3) * unitSize;
         newDirection = directions[random.nextInt(directions.length)];
 
-        snake.respawn(x, y, newDirection);
+        snake.respawn(x, y, newDirection, unitSize);
     }
 
-    private void generateNewApple() {
+    private void generateNewApple(int boardWidth, int boardHeight) {
         int x, y;
+        int unitSize = (boardWidth < boardHeight ? boardWidth : boardHeight) / 40;
         do {
-            x = random.nextInt(BOARD_WIDTH / UNIT_SIZE) * UNIT_SIZE;
-            y = random.nextInt((BOARD_HEIGHT - 80) / UNIT_SIZE) * UNIT_SIZE + 40; // -60 puis +40 pour ne pas avoir de
-                                                                                  // pomme au niveau du score, ni en
-                                                                                  // dehors de la grille
+            x = random.nextInt(boardWidth / unitSize) * unitSize;
+            y = random.nextInt((boardHeight - 4 * unitSize) / unitSize) * unitSize + 2 * unitSize; // -80 puis +40 pour
+                                                                                                   // ne pas avoir de
+                                                                                                   // pomme au niveau du
+                                                                                                   // score, ni en
+                                                                                                   // dehors de la
+                                                                                                   // grille
         } while (isPositionOccupied(x, y));
 
         apple = new Point(x, y);

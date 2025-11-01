@@ -1,7 +1,6 @@
 package model.player;
 
 import model.Snake;
-import model.Direction;
 import java.awt.Point;
 
 /**
@@ -9,9 +8,11 @@ import java.awt.Point;
  */
 public interface Player {
     void updateDirection(Snake snake, Point apple, int boardWidth, int boardHeight);
+
     String getName();
+
     PlayerType getType();
-    
+
     enum PlayerType {
         HUMAN, AI_EASY, AI_MEDIUM, AI_HARD
     }

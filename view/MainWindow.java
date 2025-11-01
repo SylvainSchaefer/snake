@@ -14,7 +14,7 @@ public class MainWindow extends JFrame {
         setTitle("Snake 2 Joueurs");
         setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
         setPreferredSize(new Dimension(800, 800));
-        setResizable(false);
+        setResizable(true);
 
         cardLayout = new CardLayout();
         mainPanel = new JPanel(cardLayout);
