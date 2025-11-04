@@ -1,6 +1,7 @@
 package view;
 
 import observer.GameObserver;
+import util.Helper;
 import model.Direction;
 import model.GameModel;
 import model.Snake;
@@ -93,20 +94,18 @@ public class GameView extends JPanel implements GameObserver {
     }
 
     private void draw(Graphics g) {
-        int bordWidth = this.getWidth();
-        int bordHeight = this.getHeight();
+        int boardWidth = this.getWidth();
+        int boardHeight = this.getHeight();
 
-        int minSize = bordWidth < bordHeight ? bordWidth : bordHeight;
-
-        int unitSize = minSize / 40; // 40 cases dans la grille
+        int unitSize = Helper.getUnitSize(boardWidth, boardHeight);
 
         if (model == null || !model.isRunning()) {
-            drawGameOver(g, bordWidth, bordHeight);
+            drawGameOver(g, boardWidth, boardHeight);
             return;
         }
 
         // Dessiner la grille (optionnel)
-        drawGrid(g, unitSize, bordWidth, bordHeight);
+        drawGrid(g, unitSize, boardWidth, boardHeight);
 
         // Dessiner la pomme
         if (model.getApple() != null) {
@@ -122,16 +121,16 @@ public class GameView extends JPanel implements GameObserver {
         }
 
         // Afficher les scores et infos
-        drawScores(g, bordWidth);
+        drawScores(g, boardWidth);
 
         // Afficher le menu pause si nécessaire
         if (showPauseMenu) {
-            drawPauseMenu(g, bordWidth, bordHeight);
+            drawPauseMenu(g, boardWidth, boardHeight);
         }
 
         // Afficher les messages de statut empilés
         if (!statusMessages.isEmpty()) {
-            drawStatusMessages(g, bordWidth, bordHeight);
+            drawStatusMessages(g, boardWidth, boardHeight);
         }
     }
 

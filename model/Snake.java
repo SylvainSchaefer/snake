@@ -65,7 +65,7 @@ public class Snake implements Serializable {
     public boolean checkWallCollision(int width, int height, int unitSize) {
         Point head = getHead();
         return head.x < 0 || head.x >= width ||
-                head.y < 2 * unitSize || head.y >= height - 2 * unitSize;
+                head.y < 2 * unitSize || head.y >= height - 1 * unitSize;
     }
 
     public boolean occupies(int x, int y) {

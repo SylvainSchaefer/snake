@@ -1,6 +1,7 @@
 package model;
 
 import observer.Observable;
+import util.Helper;
 import observer.GameObserver;
 import model.player.Player;
 import model.player.HumanPlayer;
@@ -36,7 +37,7 @@ public class GameModel extends Observable implements Serializable {
         this.player1 = player1;
         this.player2 = player2;
 
-        int unitSize = (boardWidth < boardHeight ? boardWidth : boardHeight) / 40;
+        int unitSize = Helper.getUnitSize(boardWidth, boardHeight);
 
         // Initialiser les serpents
         snake1 = new Snake(100, 100, Color.GREEN, Direction.RIGHT, unitSize);
@@ -59,7 +60,7 @@ public class GameModel extends Observable implements Serializable {
         if (!running || paused)
             return;
 
-        int unitSize = (boardWidth < boardHeight ? boardWidth : boardHeight) / 40;
+        int unitSize = Helper.getUnitSize(boardWidth, boardHeight);
 
         // Enlever les commentaires pour tester les perfs
         // long start = System.nanoTime();
@@ -102,7 +103,7 @@ public class GameModel extends Observable implements Serializable {
     private void checkAppleCollisions(int boardWidth, int boardHeight) {
         boolean newAppleNeeded = false;
 
-        int unitSize = (boardWidth < boardHeight ? boardWidth : boardHeight) / 40;
+        int unitSize = Helper.getUnitSize(boardWidth, boardHeight);
 
         if (snake1.getHead().equals(apple) || (Math.abs(snake1.getHead().getX() - apple.getX()) < unitSize
                 && Math.abs(snake1.getHead().getY() - apple.getY()) < unitSize)) {
@@ -128,7 +129,7 @@ public class GameModel extends Observable implements Serializable {
     }
 
     private void checkCollisions(int boardWidth, int boardHeight) {
-        int unitSize = (boardWidth < boardHeight ? boardWidth : boardHeight) / 40;
+        int unitSize = Helper.getUnitSize(boardWidth, boardHeight);
         // Vérifier les collisions du serpent 1
         if (snake1.checkSelfCollision() || snake1.checkWallCollision(boardWidth, boardHeight, unitSize)) {
             player2Score += 5;
@@ -150,7 +151,7 @@ public class GameModel extends Observable implements Serializable {
         int x, y;
         Direction[] directions = Direction.values();
         Direction newDirection;
-        int unitSize = (boardWidth < boardHeight ? boardWidth : boardHeight) / 40;
+        int unitSize = Helper.getUnitSize(boardWidth, boardHeight);
 
         x = (random.nextInt(boardWidth / unitSize - 6) + 3) * unitSize;
         y = (random.nextInt(boardHeight / unitSize - 6) + 3) * unitSize;
@@ -161,7 +162,7 @@ public class GameModel extends Observable implements Serializable {
 
     private void generateNewApple(int boardWidth, int boardHeight) {
         int x, y;
-        int unitSize = (boardWidth < boardHeight ? boardWidth : boardHeight) / 40;
+        int unitSize = Helper.getUnitSize(boardWidth, boardHeight);
         do {
             x = random.nextInt(boardWidth / unitSize) * unitSize;
             y = random.nextInt((boardHeight - 4 * unitSize) / unitSize) * unitSize + 2 * unitSize; // -80 puis +40 pour

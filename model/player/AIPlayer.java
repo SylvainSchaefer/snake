@@ -1,6 +1,7 @@
 package model.player;
 
 import model.Snake;
+import util.Helper;
 import model.Direction;
 import java.awt.Point;
 import java.io.Serializable;
@@ -83,14 +84,14 @@ public abstract class AIPlayer implements Player, Serializable {
     }
 
     protected boolean isSafeDirection(Snake snake, Direction dir, int boardWidth, int boardHeight) {
-        int unitSize = (boardWidth < boardHeight ? boardWidth : boardHeight) / 40;
+        int unitSize = Helper.getUnitSize(boardWidth, boardHeight);
         Point nextPos = snake.getNextPosition(dir, unitSize);
         return !snake.wouldCollideWithSelf(nextPos) &&
                 !willHitWall(snake, dir, boardWidth, boardHeight);
     }
 
     protected boolean willHitWall(Snake snake, Direction dir, int boardWidth, int boardHeight) {
-        int unitSize = (boardWidth < boardHeight ? boardWidth : boardHeight) / 40;
+        int unitSize = Helper.getUnitSize(boardWidth, boardHeight);
         Point nextPos = snake.getNextPosition(dir, unitSize);
         return nextPos.x < 0 || nextPos.x >= boardWidth ||
                 nextPos.y < 0 || nextPos.y >= boardHeight;
@@ -163,7 +164,7 @@ class HardAI extends AIPlayer {
         // Simple BFS pour trouver le chemin le plus court
         Queue<PathNode> queue = new LinkedList<>();
         Set<Point> visited = new HashSet<>();
-        int unitSize = (boardWidth < boardHeight ? boardWidth : boardHeight) / 40;
+        int unitSize = Helper.getUnitSize(boardWidth, boardHeight);
 
         for (Direction dir : Direction.values()) {
             if (snake.canChangeDirection(dir) && isSafeDirection(snake, dir, boardWidth, boardHeight)) {
