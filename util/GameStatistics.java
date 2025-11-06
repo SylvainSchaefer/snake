@@ -73,7 +73,37 @@ public class GameStatistics implements GameObserver, Serializable {
         PlayerStats stats = playerStats.computeIfAbsent(playerName, k -> new PlayerStats(k));
         stats.collisions++;
     }
-    
+
+    @Override
+    public void onGoldenAppleSpawned() {
+
+    }
+
+    @Override
+    public void onGoldenAppleDisappeared() {
+
+    }
+
+    @Override
+    public void onGoldenAppleEaten(String playerName) {
+
+    }
+
+    @Override
+    public void onBombSpawned() {
+
+    }
+
+    @Override
+    public void onBombDisappeared() {
+
+    }
+
+    @Override
+    public void onBombHit(String playerName) {
+
+    }
+
     private void updatePlayerHighScore(String playerName, int score) {
         PlayerStats stats = playerStats.computeIfAbsent(playerName, k -> new PlayerStats(k));
         if (score > stats.highScore) {

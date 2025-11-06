@@ -20,22 +20,17 @@ public class GameController {
     private DifficultyView difficultyView;
     private GameView gameView;
     private GameModel gameModel;
-    private Timer gameTimer; // Pour la logique (100ms)
-    private Timer renderTimer; // Pour le rendu (16ms ≈ 60 FPS)
+    private Timer gameTimer;  // logique
+    private Timer renderTimer; // rendu
 
     public GameController() {
-        // Initialiser la fenêtre principale
         mainWindow = new MainWindow();
-
-        // Initialiser les vues
         menuView = new MenuView();
         difficultyView = new DifficultyView();
 
-        // Ajouter les vues à la fenêtre principale
         mainWindow.addView(menuView, "menu");
         mainWindow.addView(difficultyView, "difficulty");
 
-        // Configurer les listeners
         setupMenuListeners();
         setupDifficultyListeners();
     }
@@ -76,46 +71,31 @@ public class GameController {
     }
 
     private void startGame(Player player1, Player player2) {
-        // Créer un nouveau modèle et vue de jeu
         gameModel = new GameModel();
         gameView = new GameView(gameModel);
-
-        // Ajouter la vue de jeu
         mainWindow.addView(gameView, "game");
 
-        // Configurer les contrôles
         setupGameControls();
-
-        // Initialiser le jeu
         gameModel.initGame(player1, player2);
 
-        // Observer pour détecter la fin du jeu
+        // Observateur du jeu
         gameModel.addObserver(new GameObserver() {
-            @Override
-            public void onGameStateChange(GameState state) {
-                if (state == GameState.GAME_OVER) {
-                    stopGame();
-                }
+            @Override public void onGameStateChange(GameState state) {
+                if (state == GameState.GAME_OVER) stopGame();
             }
-
-            @Override
-            public void onScoreUpdate(int player1Score, int player2Score) {
-            }
-
-            @Override
-            public void onSnakeMove() {
-            }
-
-            @Override
-            public void onAppleEaten(String playerName) {
-            }
-
-            @Override
-            public void onCollision(String playerName) {
-            }
+            @Override public void onScoreUpdate(int s1, int s2) {}
+            @Override public void onSnakeMove() {}
+            @Override public void onAppleEaten(String n) {}
+            @Override public void onCollision(String n) {}
+            @Override public void onGoldenAppleSpawned() {}
+            @Override public void onGoldenAppleDisappeared() {}
+            @Override public void onGoldenAppleEaten(String n) {}
+            @Override public void onBombSpawned() {}
+            @Override public void onBombDisappeared() {}
+            @Override public void onBombHit(String n) {}
         });
 
-        // Timer pour la LOGIQUE du jeu (10 FPS)
+        // Timer logique (10 FPS)
         gameTimer = new Timer(GAME_DELAY, e -> {
             if (gameModel != null) {
                 gameModel.update();
@@ -124,90 +104,60 @@ public class GameController {
         gameTimer.setCoalesce(false);
         gameTimer.start();
 
-        // Timer pour le RENDU (60 FPS)
+        // Timer rendu (60 FPS)
         renderTimer = new Timer(16, e -> {
-            if (gameView != null) {
-                gameView.repaint();
-            }
+            if (gameView != null) gameView.repaint();
         });
         renderTimer.setCoalesce(false);
         renderTimer.start();
 
-        // Afficher la vue de jeu
         mainWindow.showView("game");
         gameView.requestFocusInWindow();
     }
 
     private void setupGameControls() {
         gameView.addKeyListener(new KeyAdapter() {
-            @Override
-            public void keyPressed(KeyEvent e) {
+            @Override public void keyPressed(KeyEvent e) {
                 handleKeyPress(e.getKeyCode());
             }
         });
     }
 
     private void handleKeyPress(int keyCode) {
-        if (gameModel == null)
-            return;
+        if (gameModel == null) return;
 
         switch (keyCode) {
-            // Contrôles Joueur 1 (ZQSD)
-            case KeyEvent.VK_Z:
-                gameModel.setPlayer1Direction(Direction.UP);
-                break;
-            case KeyEvent.VK_S:
-                if (gameModel.isPaused()) {
-                    saveGame();
-                } else {
-                    gameModel.setPlayer1Direction(Direction.DOWN);
-                }
-                break;
-            case KeyEvent.VK_Q:
-                gameModel.setPlayer1Direction(Direction.LEFT);
-                break;
-            case KeyEvent.VK_D:
-                gameModel.setPlayer1Direction(Direction.RIGHT);
-                break;
+            // Joueur 1 (ZQSD)
+            case KeyEvent.VK_Z -> gameModel.setPlayer1Direction(Direction.UP);
+            case KeyEvent.VK_S -> {
+                if (gameModel.isPaused()) saveGame();
+                else gameModel.setPlayer1Direction(Direction.DOWN);
+            }
+            case KeyEvent.VK_Q -> gameModel.setPlayer1Direction(Direction.LEFT);
+            case KeyEvent.VK_D -> gameModel.setPlayer1Direction(Direction.RIGHT);
 
-            // Contrôles Joueur 2 (Flèches) - seulement si c'est un humain
-            case KeyEvent.VK_UP:
-                if (gameModel.getPlayer2() instanceof HumanPlayer) {
+            // Joueur 2 (Flèches)
+            case KeyEvent.VK_UP -> {
+                if (gameModel.getPlayer2() instanceof HumanPlayer)
                     gameModel.setPlayer2Direction(Direction.UP);
-                }
-                break;
-            case KeyEvent.VK_DOWN:
-                if (gameModel.getPlayer2() instanceof HumanPlayer) {
+            }
+            case KeyEvent.VK_DOWN -> {
+                if (gameModel.getPlayer2() instanceof HumanPlayer)
                     gameModel.setPlayer2Direction(Direction.DOWN);
-                }
-                break;
-            case KeyEvent.VK_LEFT:
-                if (gameModel.getPlayer2() instanceof HumanPlayer) {
+            }
+            case KeyEvent.VK_LEFT -> {
+                if (gameModel.getPlayer2() instanceof HumanPlayer)
                     gameModel.setPlayer2Direction(Direction.LEFT);
-                }
-                break;
-            case KeyEvent.VK_RIGHT:
-                if (gameModel.getPlayer2() instanceof HumanPlayer) {
+            }
+            case KeyEvent.VK_RIGHT -> {
+                if (gameModel.getPlayer2() instanceof HumanPlayer)
                     gameModel.setPlayer2Direction(Direction.RIGHT);
-                }
-                break;
+            }
 
             // Commandes générales
-            case KeyEvent.VK_P:
-                gameModel.togglePause();
-                break;
-
-            case KeyEvent.VK_ESCAPE:
-                if (gameModel.isPaused()) {
-                    returnToMenu();
-                }
-                break;
-
-            case KeyEvent.VK_SPACE:
-                if (!gameModel.isRunning()) {
-                    returnToMenu();
-                }
-                break;
+            case KeyEvent.VK_P -> gameModel.togglePause();
+            case KeyEvent.VK_ESCAPE -> { if (gameModel.isPaused()) returnToMenu(); }
+            case KeyEvent.VK_SPACE -> { if (!gameModel.isRunning()) returnToMenu(); }
         }
     }
 
@@ -215,36 +165,19 @@ public class GameController {
         JFileChooser fileChooser = new JFileChooser();
         fileChooser.setSelectedFile(new File("snake_save.dat"));
         fileChooser.setFileFilter(new javax.swing.filechooser.FileFilter() {
-            @Override
-            public boolean accept(File f) {
-                return f.getName().endsWith(".dat") || f.isDirectory();
-            }
-
-            @Override
-            public String getDescription() {
-                return "Fichiers de sauvegarde Snake (*.dat)";
-            }
+            public boolean accept(File f) { return f.getName().endsWith(".dat") || f.isDirectory(); }
+            public String getDescription() { return "Fichiers de sauvegarde Snake (*.dat)"; }
         });
 
         if (fileChooser.showSaveDialog(mainWindow) == JFileChooser.APPROVE_OPTION) {
             try {
                 String filename = fileChooser.getSelectedFile().getPath();
-                if (!filename.endsWith(".dat")) {
-                    filename += ".dat";
-                }
-
+                if (!filename.endsWith(".dat")) filename += ".dat";
                 SaveState saveState = new SaveState(gameModel);
                 saveState.save(filename);
-
-                JOptionPane.showMessageDialog(mainWindow,
-                        "Partie sauvegardée avec succès!",
-                        "Sauvegarde",
-                        JOptionPane.INFORMATION_MESSAGE);
+                JOptionPane.showMessageDialog(mainWindow, "Partie sauvegardée avec succès!", "Sauvegarde", JOptionPane.INFORMATION_MESSAGE);
             } catch (Exception ex) {
-                JOptionPane.showMessageDialog(mainWindow,
-                        "Erreur lors de la sauvegarde: " + ex.getMessage(),
-                        "Erreur",
-                        JOptionPane.ERROR_MESSAGE);
+                JOptionPane.showMessageDialog(mainWindow, "Erreur: " + ex.getMessage(), "Erreur", JOptionPane.ERROR_MESSAGE);
             }
         }
     }
@@ -252,15 +185,8 @@ public class GameController {
     private void loadGame() {
         JFileChooser fileChooser = new JFileChooser();
         fileChooser.setFileFilter(new javax.swing.filechooser.FileFilter() {
-            @Override
-            public boolean accept(File f) {
-                return f.getName().endsWith(".dat") || f.isDirectory();
-            }
-
-            @Override
-            public String getDescription() {
-                return "Fichiers de sauvegarde Snake (*.dat)";
-            }
+            public boolean accept(File f) { return f.getName().endsWith(".dat") || f.isDirectory(); }
+            public String getDescription() { return "Fichiers de sauvegarde Snake (*.dat)"; }
         });
 
         if (fileChooser.showOpenDialog(mainWindow) == JFileChooser.APPROVE_OPTION) {
@@ -268,84 +194,34 @@ public class GameController {
                 String filename = fileChooser.getSelectedFile().getPath();
                 SaveState saveState = SaveState.load(filename);
 
-                // Créer un nouveau modèle et restaurer l'état
                 gameModel = new GameModel();
                 gameView = new GameView(gameModel);
                 saveState.restoreToModel(gameModel);
-
-                // Ajouter la vue et configurer
                 mainWindow.addView(gameView, "game");
                 setupGameControls();
 
-                // Observer pour la fin du jeu
-                gameModel.addObserver(new GameObserver() {
-                    @Override
-                    public void onGameStateChange(GameState state) {
-                        if (state == GameState.GAME_OVER) {
-                            stopGame();
-                        }
-                    }
-
-                    @Override
-                    public void onScoreUpdate(int player1Score, int player2Score) {
-                    }
-
-                    @Override
-                    public void onSnakeMove() {
-                    }
-
-                    @Override
-                    public void onAppleEaten(String playerName) {
-                    }
-
-                    @Override
-                    public void onCollision(String playerName) {
-                    }
-                });
-
-                // Timer pour la LOGIQUE du jeu (10 FPS)
-                gameTimer = new Timer(GAME_DELAY, e -> {
-                    if (gameModel != null) {
-                        gameModel.update();
-                    }
-                });
-                gameTimer.setCoalesce(false);
+                // Timer logique
+                gameTimer = new Timer(GAME_DELAY, e -> { if (gameModel != null) gameModel.update(); });
                 gameTimer.start();
 
-                // Timer pour le RENDU (60 FPS)
-                renderTimer = new Timer(16, e -> {
-                    if (gameView != null) {
-                        gameView.repaint();
-                    }
-                });
-                renderTimer.setCoalesce(false);
+                // Timer rendu
+                renderTimer = new Timer(16, e -> { if (gameView != null) gameView.repaint(); });
                 renderTimer.start();
 
-                // Afficher le jeu
                 mainWindow.showView("game");
                 gameView.requestFocusInWindow();
 
-                JOptionPane.showMessageDialog(mainWindow,
-                        "Partie chargée avec succès!",
-                        "Chargement",
-                        JOptionPane.INFORMATION_MESSAGE);
+                JOptionPane.showMessageDialog(mainWindow, "Partie chargée avec succès!", "Chargement", JOptionPane.INFORMATION_MESSAGE);
 
             } catch (Exception ex) {
-                JOptionPane.showMessageDialog(mainWindow,
-                        "Erreur lors du chargement: " + ex.getMessage(),
-                        "Erreur",
-                        JOptionPane.ERROR_MESSAGE);
+                JOptionPane.showMessageDialog(mainWindow, "Erreur lors du chargement: " + ex.getMessage(), "Erreur", JOptionPane.ERROR_MESSAGE);
             }
         }
     }
 
     private void stopGame() {
-        if (gameTimer != null) {
-            gameTimer.stop();
-        }
-        if (renderTimer != null) {
-            renderTimer.stop();
-        }
+        if (gameTimer != null) gameTimer.stop();
+        if (renderTimer != null) renderTimer.stop();
     }
 
     private void returnToMenu() {

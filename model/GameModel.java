@@ -11,6 +11,7 @@ import java.util.Random;
 
 /**
  * Modèle principal du jeu - gère la logique
+ * Ajout : Pomme dorée (bonus)
  */
 public class GameModel extends Observable implements Serializable {
     private static final long serialVersionUID = 1L;
@@ -23,11 +24,23 @@ public class GameModel extends Observable implements Serializable {
     private Player player1;
     private Player player2;
     private Point apple;
+    private Point goldenApple; // 🍏 Pomme dorée
+
     private int player1Score;
     private int player2Score;
     private boolean running;
     private boolean paused;
     private Random random;
+
+    // Timers pour la pomme dorée
+    private long lastGoldenAppleSpawn;
+    private long goldenAppleSpawnTime;
+    private long nextGoldenAppleDelay;
+
+    private static final int GOLDEN_APPLE_MIN_INTERVAL = 20000; // 20s
+    private static final int GOLDEN_APPLE_MAX_INTERVAL = 30000; // 30s
+    private static final int GOLDEN_APPLE_DURATION = 7000; // visible pendant 7s
+    private static final int GOLDEN_APPLE_POINTS = 5;
 
     public GameModel() {
         this.random = new Random();
@@ -50,52 +63,59 @@ public class GameModel extends Observable implements Serializable {
         // Placer la première pomme
         generateNewApple();
 
+        // Config pomme dorée
+        goldenApple = null;
+        lastGoldenAppleSpawn = System.currentTimeMillis();
+        nextGoldenAppleDelay = getRandomGoldenAppleDelay();
+
         running = true;
         paused = false;
 
         notifyGameStateChange(GameObserver.GameState.PLAYING);
     }
 
+    private long getRandomGoldenAppleDelay() {
+        return GOLDEN_APPLE_MIN_INTERVAL + random.nextInt(GOLDEN_APPLE_MAX_INTERVAL - GOLDEN_APPLE_MIN_INTERVAL);
+    }
+
     public void update() {
         if (!running || paused)
             return;
 
-        // Enlever les commentaires pour tester les perfs
-        // long start = System.nanoTime();
-
-        // long t1 = System.nanoTime();
         player1.updateDirection(snake1, apple, BOARD_WIDTH, BOARD_HEIGHT);
         player2.updateDirection(snake2, apple, BOARD_WIDTH, BOARD_HEIGHT);
-        // long t2 = System.nanoTime();
 
         snake1.move();
         snake2.move();
-        // long t3 = System.nanoTime();
-
         notifySnakeMove();
-        // long t4 = System.nanoTime();
 
+        // Gestion des pommes
         checkAppleCollisions();
-        // long t5 = System.nanoTime();
+        handleGoldenApple();
+        checkGoldenAppleCollisions();
 
+        // Collisions classiques
         checkCollisions();
-        // long t6 = System.nanoTime();
+    }
 
-        /*
-         * long total = (t6 - start) / 1_000; // ms
-         * if (total > 70) { // Seulement si ça prend longtemps
-         * System.out.printf(
-         * "update total=%dms | dir=%dms | move=%dms | notify=%dms | apple=%dms | coll=%dms%n"
-         * ,
-         * total,
-         * (t2 - t1) / 1_000,
-         * (t3 - t2) / 1_000,
-         * (t4 - t3) / 1_000,
-         * (t5 - t4) / 1_000,
-         * (t6 - t5) / 1_000
-         * );
-         * }
-         */
+    private void handleGoldenApple() {
+        long now = System.currentTimeMillis();
+
+        // Apparition
+        if (goldenApple == null && now - lastGoldenAppleSpawn > nextGoldenAppleDelay) {
+            generateGoldenApple();
+            goldenAppleSpawnTime = now;
+            lastGoldenAppleSpawn = now;
+            notifyGoldenAppleSpawned();
+        }
+
+        // Disparition
+        if (goldenApple != null && now - goldenAppleSpawnTime > GOLDEN_APPLE_DURATION) {
+            goldenApple = null;
+            notifyGoldenAppleDisappeared();
+            lastGoldenAppleSpawn = now;
+            nextGoldenAppleDelay = getRandomGoldenAppleDelay();
+        }
     }
 
     private void checkAppleCollisions() {
@@ -122,8 +142,34 @@ public class GameModel extends Observable implements Serializable {
         }
     }
 
+    private void checkGoldenAppleCollisions() {
+        if (goldenApple == null)
+            return;
+
+        boolean eaten = false;
+
+        if (snake1.getHead().equals(goldenApple)) {
+            snake1.grow();
+            player1Score += GOLDEN_APPLE_POINTS;
+            notifyGoldenAppleEaten(player1.getName());
+            notifyScoreUpdate(player1Score, player2Score);
+            eaten = true;
+        } else if (snake2.getHead().equals(goldenApple)) {
+            snake2.grow();
+            player2Score += GOLDEN_APPLE_POINTS;
+            notifyGoldenAppleEaten(player2.getName());
+            notifyScoreUpdate(player1Score, player2Score);
+            eaten = true;
+        }
+
+        if (eaten) {
+            goldenApple = null;
+            lastGoldenAppleSpawn = System.currentTimeMillis();
+            nextGoldenAppleDelay = getRandomGoldenAppleDelay();
+        }
+    }
+
     private void checkCollisions() {
-        // Vérifier les collisions du serpent 1
         if (snake1.checkSelfCollision() || snake1.checkWallCollision(BOARD_WIDTH, BOARD_HEIGHT)) {
             player2Score += 5;
             notifyCollision(player1.getName());
@@ -131,7 +177,6 @@ public class GameModel extends Observable implements Serializable {
             respawnSnake(snake1);
         }
 
-        // Vérifier les collisions du serpent 2
         if (snake2.checkSelfCollision() || snake2.checkWallCollision(BOARD_WIDTH, BOARD_HEIGHT)) {
             player1Score += 5;
             notifyCollision(player2.getName());
@@ -156,12 +201,20 @@ public class GameModel extends Observable implements Serializable {
         int x, y;
         do {
             x = random.nextInt(BOARD_WIDTH / UNIT_SIZE) * UNIT_SIZE;
-            y = random.nextInt((BOARD_HEIGHT - 80) / UNIT_SIZE) * UNIT_SIZE + 40; // -60 puis +40 pour ne pas avoir de
-                                                                                  // pomme au niveau du score, ni en
-                                                                                  // dehors de la grille
+            y = random.nextInt((BOARD_HEIGHT - 80) / UNIT_SIZE) * UNIT_SIZE + 40;
         } while (isPositionOccupied(x, y));
 
         apple = new Point(x, y);
+    }
+
+    private void generateGoldenApple() {
+        int x, y;
+        do {
+            x = random.nextInt(BOARD_WIDTH / UNIT_SIZE) * UNIT_SIZE;
+            y = random.nextInt((BOARD_HEIGHT - 80) / UNIT_SIZE) * UNIT_SIZE + 40;
+        } while (isPositionOccupied(x, y) || (apple != null && apple.equals(new Point(x, y))));
+
+        goldenApple = new Point(x, y);
     }
 
     private boolean isPositionOccupied(int x, int y) {
@@ -179,7 +232,6 @@ public class GameModel extends Observable implements Serializable {
         notifyGameStateChange(GameObserver.GameState.GAME_OVER);
     }
 
-    // Méthodes pour les contrôles du joueur humain
     public void setPlayer1Direction(Direction direction) {
         if (player1 instanceof HumanPlayer) {
             ((HumanPlayer) player1).setPendingDirection(direction);
@@ -193,45 +245,19 @@ public class GameModel extends Observable implements Serializable {
     }
 
     // Getters
-    public Snake getSnake1() {
-        return snake1;
-    }
+    public Snake getSnake1() { return snake1; }
+    public Snake getSnake2() { return snake2; }
+    public Player getPlayer1() { return player1; }
+    public Player getPlayer2() { return player2; }
+    public Point getApple() { return apple; }
+    public Point getGoldenApple() { return goldenApple; }
+    public int getPlayer1Score() { return player1Score; }
+    public int getPlayer2Score() { return player2Score; }
+    public boolean isRunning() { return running; }
+    public boolean isPaused() { return paused; }
 
-    public Snake getSnake2() {
-        return snake2;
-    }
-
-    public Player getPlayer1() {
-        return player1;
-    }
-
-    public Player getPlayer2() {
-        return player2;
-    }
-
-    public Point getApple() {
-        return apple;
-    }
-
-    public int getPlayer1Score() {
-        return player1Score;
-    }
-
-    public int getPlayer2Score() {
-        return player2Score;
-    }
-
-    public boolean isRunning() {
-        return running;
-    }
-
-    public boolean isPaused() {
-        return paused;
-    }
-
-    // Setters pour le chargement
     public void setGameState(Snake snake1, Snake snake2, Player player1, Player player2,
-            Point apple, int player1Score, int player2Score) {
+                             Point apple, int player1Score, int player2Score) {
         this.snake1 = snake1;
         this.snake2 = snake2;
         this.player1 = player1;
@@ -241,5 +267,8 @@ public class GameModel extends Observable implements Serializable {
         this.player2Score = player2Score;
         this.running = true;
         this.paused = false;
+        this.goldenApple = null;
+        this.lastGoldenAppleSpawn = System.currentTimeMillis();
+        this.nextGoldenAppleDelay = getRandomGoldenAppleDelay();
     }
 }
