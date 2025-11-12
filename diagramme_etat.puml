@@ -1,0 +1,109 @@
+@startuml State_Game_Lifecycle
+!theme plain
+skinparam state {
+    BackgroundColor<<Terminal>> LightGray
+    BackgroundColor<<Active>> LightGreen
+}
+
+[*] --> ApplicationStart
+
+state ApplicationStart {
+    [*] --> InitializeWindow
+    InitializeWindow --> LoadResources
+    LoadResources --> ShowMenu
+}
+
+state MainMenu <<Active>> {
+    [*] --> WaitingForChoice
+    
+    state WaitingForChoice {
+        [*] --> DisplayOptions
+        DisplayOptions : Show buttons:\n- 2 Players\n- Vs AI\n- Load Game\n- Quit
+    }
+}
+
+state DifficultySelection {
+    [*] --> DisplayDifficulties
+    DisplayDifficulties : Easy (30%)\nMedium (60%)\nHard (90%)
+}
+
+state GameInitialization {
+    [*] --> CreatePlayers
+    CreatePlayers --> CreateSnakes
+    CreateSnakes --> PlaceApple
+    PlaceApple --> StartTimer
+}
+
+state Playing <<Active>> {
+    [*] --> GameLoop
+    
+    state GameLoop {
+        [*] --> UpdatePlayers
+        UpdatePlayers --> MoveSnakes
+        MoveSnakes --> CheckCollisions
+        CheckCollisions --> UpdateDisplay
+        UpdateDisplay --> UpdatePlayers : Timer tick (100ms)
+    }
+    
+    state CheckCollisions {
+        [*] --> CheckApple
+        CheckApple --> CheckWalls : No apple
+        CheckApple --> EatApple : Apple collision
+        EatApple --> GenerateNewApple
+        GenerateNewApple --> UpdateScore
+        UpdateScore --> CheckWalls
+        CheckWalls --> CheckSelfCollision
+        CheckSelfCollision --> [*] : No collision
+        CheckSelfCollision --> HandleCollision : Collision detected
+        HandleCollision --> RespawnSnake
+        RespawnSnake --> [*]
+    }
+}
+
+state Paused {
+    [*] --> DisplayPauseMenu
+    DisplayPauseMenu : Show options:\n- Resume (P)\n- Save (S)\n- Menu (ESC)
+    
+    state SaveGame {
+        [*] --> OpenFileDialog
+        OpenFileDialog --> SerializeState
+        SerializeState --> WriteToFile
+        WriteToFile --> ShowConfirmation
+        ShowConfirmation --> [*]
+    }
+}
+
+state LoadingGame {
+    [*] --> OpenFileDialog
+    OpenFileDialog --> ReadFile
+    ReadFile --> DeserializeState
+    DeserializeState --> RestoreGameModel
+    RestoreGameModel --> [*]
+}
+state ApplicationQuit <<Terminal>> {
+    [*] --> CloseWindow
+    CloseWindow --> [*]
+}
+
+' Transitions principales
+ApplicationStart --> MainMenu : Initialization complete
+MainMenu --> DifficultySelection : "Vs AI" selected
+MainMenu --> GameInitialization : "2 Players" selected
+MainMenu --> LoadingGame : "Load Game" selected
+MainMenu --> ApplicationQuit : "Quit" selected
+
+DifficultySelection --> GameInitialization : Difficulty chosen
+DifficultySelection --> MainMenu : Back button
+
+GameInitialization --> Playing : Game ready
+LoadingGame --> Playing : Game loaded
+LoadingGame --> MainMenu : Load failed
+
+Playing --> Paused : Press P
+
+Paused --> Playing : Resume (P)
+Paused --> SaveGame : Save (S)
+Paused --> MainMenu : Menu (ESC)
+SaveGame --> Paused : Save complete
+
+@enduml

@@ -1,0 +1,119 @@
+@startuml UseCase_Snake_Game
+!theme plain
+skinparam actorStyle awesome
+left to right direction
+
+' Acteurs
+actor "Joueur 1\n(Humain)" as P1
+actor "Joueur 2\n(Humain)" as P2
+actor "IA" as AI
+actor "Système" as SYS
+
+' Système
+rectangle "Système de Jeu Snake 2 Joueurs" {
+    ' Cas d'utilisation principaux
+    usecase "Démarrer une partie" as UC_Start
+    usecase "Jouer en mode\n2 joueurs local" as UC_2Players
+    usecase "Jouer contre l'IA" as UC_AI
+    usecase "Choisir difficulté IA" as UC_Difficulty
+    
+    ' Gameplay
+    usecase "Contrôler le serpent" as UC_Control
+    usecase "Manger une pomme" as UC_Eat
+    usecase "Éviter les obstacles" as UC_Avoid
+    usecase "Respawn après collision" as UC_Respawn
+    
+    ' Gestion de partie
+    usecase "Mettre en pause" as UC_Pause
+    usecase "Sauvegarder la partie" as UC_Save
+    usecase "Charger une partie" as UC_Load
+    usecase "Quitter la partie" as UC_Quit
+    usecase "Retourner au menu" as UC_Menu
+    
+    ' Système
+    usecase "Calculer le score" as UC_Score
+    usecase "Détecter les collisions" as UC_Collision
+    usecase "Générer les pommes" as UC_Apple
+    usecase "Gérer le timer" as UC_Timer
+    ' IA
+    usecase "Calculer meilleur chemin" as UC_Path
+    usecase "Éviter les dangers" as UC_AIAvoid
+    usecase "Poursuivre la pomme" as UC_Chase
+}
+
+' Relations Joueur 1
+P1 --> UC_Start
+P1 --> UC_2Players
+P1 --> UC_AI
+P1 --> UC_Control : "ZQSD"
+P1 --> UC_Pause
+P1 --> UC_Save
+P1 --> UC_Load
+P1 --> UC_Quit
+
+' Relations Joueur 2
+P2 --> UC_2Players
+P2 --> UC_Control : "Flèches"
+
+' Relations IA
+AI --> UC_AI
+AI --> UC_Control : "Auto"
+AI --> UC_Path
+AI --> UC_AIAvoid
+AI --> UC_Chase
+
+' Relations Système
+SYS --> UC_Score
+SYS --> UC_Collision
+SYS --> UC_Apple
+SYS --> UC_Timer
+SYS --> UC_Respawn
+
+' Extensions et inclusions
+UC_Start ..> UC_2Players : <<extend>>
+UC_Start ..> UC_AI : <<extend>>
+UC_AI ..> UC_Difficulty : <<include>>
+
+UC_Control ..> UC_Eat : <<extend>>
+UC_Control ..> UC_Avoid : <<extend>>
+
+UC_Collision ..> UC_Respawn : <<include>>
+UC_Collision ..> UC_Score : <<include>> "+5 points"
+
+UC_Eat ..> UC_Score : <<include>> "+1 point"
+UC_Eat ..> UC_Apple : <<include>>
+
+UC_Pause ..> UC_Save : <<extend>>
+UC_Pause ..> UC_Menu : <<extend>>
+
+UC_Path ..> UC_AIAvoid : <<include>>
+UC_Path ..> UC_Chase : <<include>>
+
+UC_Timer ..> UC_Control : <<include>>
+
+' Notes
+note right of UC_Difficulty
+    3 niveaux:
+    - Facile (30%)
+    - Moyen (60%)
+    - Difficile (90% + BFS)
+end note
+
+note left of UC_Control
+    Contrôles:
+    - P1: ZQSD
+    - P2: Flèches
+    - P: Pause
+    - S: Sauvegarder (en pause)
+    - ESC: Menu
+end note
+
+note bottom of UC_Respawn
+    Respawn automatique
+    après collision avec:
+    - Murs
+    - Soi-même
+    (Pas entre serpents)
+end note
+
+@enduml

@@ -1,0 +1,337 @@
+@startuml snake_complete_diagram
+'https://plantuml.com/class-diagram
+skinparam style strictuml
+skinparam classAttributeIconSize 0
+skinparam classFontStyle Bold
+hide empty members
+
+' ========== CONTROLLER ==========
+package controller {
+    class GameController {
+        {static} - GAME_DELAY: int
+        - mainWindow: MainWindow
+        - menuView: MenuView
+        - difficultyView: DifficultyView
+        - gameView: GameView
+        - gameModel: GameModel
+        - gameTimer: Timer
+        - renderTimer: Timer
+        
+        + GameController()
+        + start()
+        - setupMenuListeners()
+        - setupDifficultyListeners()
+        - startTwoPlayerGame()
+        - startAIGame(difficulty: int)
+        - startGame(player1: Player, player2: Player)
+        - setupGameControls()
+        - handleKeyPress(keyCode: int)
+        - saveGame()
+        - loadGame()
+        - stopGame()
+        - returnToMenu()
+    }
+}
+
+' ========== MODEL ==========
+package model {
+    enum Direction {
+        UP
+        DOWN
+        LEFT
+        RIGHT
+    }
+    
+    class GameModel {
+        {static} - serialVersionUID: long
+        - snake1: Snake
+        - snake2: Snake
+        - player1: Player
+        - player2: Player
+        - apple: Point
+        - player1Score: int
+        - player2Score: int
+        - running: boolean
+        - paused: boolean
+        - random: Random
+        
+        + GameModel()
+        + initGame(player1: Player, player2: Player, boardWidth: int, boardHeight: int)
+        + update(boardWidth: int, boardHeight: int)
+        + togglePause()
+        + endGame()
+        + setPlayer1Direction(direction: Direction)
+        + setPlayer2Direction(direction: Direction)
+        + getSnake1(): Snake
+        + getSnake2(): Snake
+        + getPlayer1(): Player
+        + getPlayer2(): Player
+        + getApple(): Point
+        + getPlayer1Score(): int
+        + getPlayer2Score(): int
+        + isRunning(): boolean
+        + isPaused(): boolean
+    }
+    
+    class Snake {
+        {static} - serialVersionUID: long
+        {static} - INITIAL_SIZE: int
+        - body: List<Point>
+        - direction: Direction
+        - color: Color
+        - growing: boolean
+        
+        + Snake(x: int, y: int, color: Color, initialDirection: Direction, unitSize: int)
+        + move(unitSize: int)
+        + grow()
+        + checkSelfCollision(): boolean
+        + checkWallCollision(width: int, height: int, unitSize: int): boolean
+        + occupies(x: int, y: int): boolean
+        + respawn(x: int, y: int, newDirection: Direction, unitSize: int)
+        + canChangeDirection(newDirection: Direction): boolean
+        + getHead(): Point
+        + getBody(): List<Point>
+        + getDirection(): Direction
+        + setDirection(direction: Direction)
+        + getColor(): Color
+        + getLength(): int
+    }
+    
+    class SaveState {
+        {static} - serialVersionUID: long
+        - snake1: Snake
+        - snake2: Snake
+        - player1: Player
+        - player2: Player
+        - apple: Point
+        - player1Score: int
+        - player2Score: int
+        
+        + SaveState(model: GameModel)
+        + save(filename: String)
+        {static} + load(filename: String): SaveState
+        + restoreToModel(model: GameModel)
+    }
+}
+
+' ========== PLAYER ==========
+package model.player {
+    interface Player {
+        {abstract} + updateDirection(snake: Snake, apple: Point, boardWidth: int, boardHeight: int)
+        {abstract} + getName(): String
+        {abstract} + getType(): PlayerType
+    }
+    
+    enum PlayerType {
+        HUMAN
+        AI_EASY
+        AI_MEDIUM
+        AI_HARD
+    }
+    
+    class HumanPlayer {
+        {static} - serialVersionUID: long
+        - name: String
+        - pendingDirection: Direction
+        
+        + HumanPlayer(name: String)
+        + updateDirection(snake: Snake, apple: Point, boardWidth: int, boardHeight: int)
+        + setPendingDirection(direction: Direction)
+        + getName(): String
+        + getType(): PlayerType
+    }
+    
+    abstract class AIPlayer {
+        {static} - serialVersionUID: long
+        # random: Random
+        # successRate: int
+        
+        + AIPlayer(successRate: int)
+        + updateDirection(snake: Snake, apple: Point, boardWidth: int, boardHeight: int)
+        # calculateBestDirection(snake: Snake, apple: Point, boardWidth: int, boardHeight: int): Direction
+        # isSafeDirection(snake: Snake, dir: Direction, boardWidth: int, boardHeight: int): boolean
+        # willHitWall(snake: Snake, dir: Direction, boardWidth: int, boardHeight: int): boolean
+    }
+    
+    class EasyAI {
+        {static} - serialVersionUID: long
+        + EasyAI()
+        + getName(): String
+        + getType(): PlayerType
+    }
+    
+    class MediumAI {
+        {static} - serialVersionUID: long
+        + MediumAI()
+        + getName(): String
+        + getType(): PlayerType
+    }
+    
+    class HardAI {
+        {static} - serialVersionUID: long
+        + HardAI()
+        # calculateBestDirection(snake: Snake, apple: Point, boardWidth: int, boardHeight: int): Direction
+        - findPathToApple(snake: Snake, apple: Point, boardWidth: int, boardHeight: int): Direction
+        + getName(): String
+        + getType(): PlayerType
+    }
+    
+    class PlayerFactory {
+        {static} + createHumanPlayer(name: String): Player
+        {static} + createAIPlayer(difficulty: int): Player
+    }
+}
+
+' ========== VIEW ==========
+package view {
+    class MainWindow {
+        - cardLayout: CardLayout
+        - mainPanel: JPanel
+        
+        + MainWindow()
+        + addView(view: Component, name: String)
+        + showView(name: String)
+        + display()
+    }
+    
+    class MenuView {
+        - twoPlayersButton: JButton
+        - vsAIButton: JButton
+        - loadButton: JButton
+        - quitButton: JButton
+        
+        + MenuView()
+        + addTwoPlayersListener(listener: ActionListener)
+        + addVsAIListener(listener: ActionListener)
+        + addLoadListener(listener: ActionListener)
+        + addQuitListener(listener: ActionListener)
+    }
+    
+    class DifficultyView {
+        - easyButton: JButton
+        - mediumButton: JButton
+        - hardButton: JButton
+        - backButton: JButton
+        
+        + DifficultyView()
+        + addEasyListener(listener: ActionListener)
+        + addMediumListener(listener: ActionListener)
+        + addHardListener(listener: ActionListener)
+        + addBackListener(listener: ActionListener)
+    }
+    
+    class GameView {
+        {static} - BOARD_WIDTH: int
+        {static} - BOARD_HEIGHT: int
+        {static} - MESSAGE_DURATION: int
+        - model: GameModel
+        - statusMessages: List<StatusMessage>
+        - showPauseMenu: boolean
+        
+        + GameView(model: GameModel)
+        # paintComponent(g: Graphics)
+        - draw(g: Graphics)
+        - drawGrid(g: Graphics, unitSize: int, boardWidth: int, boardHeight: int)
+        - drawApple(g: Graphics, apple: Point, unitSize: int)
+        - drawSnake(g: Graphics, snake: Snake, playerNumber: int, unitSize: int)
+        - drawScores(g: Graphics, boardWidth: int)
+        - drawPauseMenu(g: Graphics, boardWidth: int, boardHeight: int)
+        - drawGameOver(g: Graphics, boardWidth: int, boardHeight: int)
+        + onScoreUpdate(player1Score: int, player2Score: int)
+        + onGameStateChange(state: GameState)
+        + onSnakeMove()
+        + onAppleEaten(playerName: String)
+        + onCollision(playerName: String)
+    }
+    
+    class StatusMessage {
+        + text: String
+        + creationTime: long
+        
+        + StatusMessage(text: String)
+        + getAlpha(): float
+        + isExpired(): boolean
+    }
+}
+
+' ========== OBSERVER ==========
+package observer {
+    interface GameObserver {
+        {abstract} + onGameStateChange(state: GameState)
+        {abstract} + onScoreUpdate(player1Score: int, player2Score: int)
+        {abstract} + onSnakeMove()
+        {abstract} + onAppleEaten(playerName: String)
+        {abstract} + onCollision(playerName: String)
+    }
+    
+    enum GameState {
+        PLAYING
+        PAUSED
+        GAME_OVER
+    }
+    
+    abstract class Observable {
+        - observers: List<GameObserver>
+        
+        + addObserver(observer: GameObserver)
+        + removeObserver(observer: GameObserver)
+        # notifyGameStateChange(state: GameState)
+        # notifyScoreUpdate(player1Score: int, player2Score: int)
+        # notifySnakeMove()
+        # notifyAppleEaten(playerName: String)
+        # notifyCollision(playerName: String)
+    }
+}
+
+' ========== UTIL ==========
+package util {
+    class Helper {
+        {static} + getUnitSize(boardWidth: int, boardHeight: int): int
+    }
+}
+
+' ========== RELATIONS PRINCIPALES ==========
+
+' Controller relations
+GameController --> MainWindow
+GameController --> MenuView
+GameController --> DifficultyView
+GameController --> GameView
+GameController --> GameModel
+GameController ..> SaveState : <<use>>
+GameController ..> PlayerFactory : <<use>>
+
+' Model relations
+GameModel --|> Observable
+GameModel "1" o-- "2" Snake
+GameModel --> "2" Player
+GameModel --> Direction
+SaveState ..> GameModel : <<restore>>
+
+' Player relations
+HumanPlayer ..|> Player
+AIPlayer ..|> Player
+EasyAI --|> AIPlayer
+MediumAI --|> AIPlayer
+HardAI --|> AIPlayer
+Player +-- PlayerType
+PlayerFactory ..> Player : <<create>>
+Player ..> Snake : <<use>>
+Player ..> Direction : <<use>>
+
+' View relations
+GameView ..|> GameObserver
+GameView --> GameModel
+GameView +-- StatusMessage
+MainWindow --> "1..*" view.MenuView
+MainWindow --> "1..*" view.DifficultyView
+MainWindow --> "0..1" GameView
+
+' Observer relations
+Observable --> "*" GameObserver
+GameObserver +-- GameState
+
+' Snake relations
+Snake --> Direction
+
+@enduml

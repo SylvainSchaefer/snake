@@ -147,7 +147,7 @@ class HardAI extends AIPlayer {
     private static final long serialVersionUID = 1L;
 
     public HardAI() {
-        super(90);
+        super(100);
     }
 
     @Override
@@ -182,7 +182,7 @@ class HardAI extends AIPlayer {
             }
 
             // Explorer les voisins (limité en profondeur pour performance)
-            if (node.depth < 5) {
+            if (node.depth < 500) {
                 for (Direction dir : Direction.values()) {
                     Point nextPos = getNextPosition(node.position, dir, unitSize);
                     if (!visited.contains(nextPos) &&

@@ -1,0 +1,623 @@
+<!DOCTYPE html>
+<html lang="fr">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Visualisation BFS - Recherche de Chemin</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            padding: 20px;
+        }
+
+        .container {
+            background: white;
+            border-radius: 20px;
+            padding: 30px;
+            box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
+            max-width: 900px;
+            width: 100%;
+        }
+
+        h1 {
+            color: #333;
+            text-align: center;
+            margin-bottom: 10px;
+            font-size: 2em;
+        }
+
+        .subtitle {
+            text-align: center;
+            color: #666;
+            margin-bottom: 30px;
+            font-size: 1.1em;
+        }
+
+        .grid-container {
+            display: inline-block;
+            border: 3px solid #333;
+            border-radius: 10px;
+            overflow: hidden;
+            box-shadow: 0 4px 15px rgba(0, 0, 0, 0.2);
+            margin: 0 auto;
+            display: block;
+        }
+
+        .grid {
+            display: grid;
+            grid-template-columns: repeat(12, 40px);
+            grid-template-rows: repeat(10, 40px);
+            gap: 1px;
+            background: #ddd;
+        }
+
+        .cell {
+            background: white;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 20px;
+            font-weight: bold;
+            transition: all 0.3s ease;
+            position: relative;
+        }
+
+        .cell.snake {
+            background: #2ecc71;
+            color: white;
+        }
+
+        .cell.snake-body {
+            background: #27ae60;
+        }
+
+        .cell.apple {
+            background: #e74c3c;
+            color: white;
+            animation: pulse 1s infinite;
+        }
+
+        .cell.visited {
+            background: #3498db;
+            animation: fadeIn 0.3s ease;
+        }
+
+        .cell.exploring {
+            background: #f39c12;
+            animation: explore 0.5s ease;
+        }
+
+        .cell.path {
+            background: #9b59b6;
+            animation: pathReveal 0.5s ease;
+        }
+
+        .cell.current {
+            background: #e67e22;
+            transform: scale(1.2);
+            z-index: 10;
+        }
+
+        .cell .depth {
+            position: absolute;
+            bottom: 2px;
+            right: 2px;
+            font-size: 10px;
+            color: white;
+            background: rgba(0, 0, 0, 0.5);
+            padding: 1px 3px;
+            border-radius: 3px;
+        }
+
+        @keyframes pulse {
+
+            0%,
+            100% {
+                transform: scale(1);
+            }
+
+            50% {
+                transform: scale(1.1);
+            }
+        }
+
+        @keyframes fadeIn {
+            from {
+                opacity: 0;
+                transform: scale(0.8);
+            }
+
+            to {
+                opacity: 1;
+                transform: scale(1);
+            }
+        }
+
+        @keyframes explore {
+            0% {
+                transform: scale(0.8);
+                opacity: 0.5;
+            }
+
+            50% {
+                transform: scale(1.2);
+            }
+
+            100% {
+                transform: scale(1);
+                opacity: 1;
+            }
+        }
+
+        @keyframes pathReveal {
+            from {
+                transform: scale(0.5) rotate(180deg);
+                opacity: 0;
+            }
+
+            to {
+                transform: scale(1) rotate(0deg);
+                opacity: 1;
+            }
+        }
+
+        .controls {
+            display: flex;
+            justify-content: center;
+            gap: 15px;
+            margin: 30px 0;
+            flex-wrap: wrap;
+        }
+
+        button {
+            padding: 12px 30px;
+            font-size: 16px;
+            border: none;
+            border-radius: 8px;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            font-weight: 600;
+            box-shadow: 0 4px 10px rgba(0, 0, 0, 0.2);
+        }
+
+        button:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 6px 15px rgba(0, 0, 0, 0.3);
+        }
+
+        button:active {
+            transform: translateY(0);
+        }
+
+        .btn-start {
+            background: #2ecc71;
+            color: white;
+        }
+
+        .btn-start:hover {
+            background: #27ae60;
+        }
+
+        .btn-step {
+            background: #3498db;
+            color: white;
+        }
+
+        .btn-step:hover {
+            background: #2980b9;
+        }
+
+        .btn-reset {
+            background: #e74c3c;
+            color: white;
+        }
+
+        .btn-reset:hover {
+            background: #c0392b;
+        }
+
+        .btn-speed {
+            background: #9b59b6;
+            color: white;
+        }
+
+        .btn-speed:hover {
+            background: #8e44ad;
+        }
+
+        .info {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 15px;
+            margin-top: 25px;
+        }
+
+        .info-item {
+            background: #f8f9fa;
+            padding: 15px;
+            border-radius: 10px;
+            border-left: 4px solid #3498db;
+        }
+
+        .info-item h3 {
+            color: #333;
+            margin-bottom: 5px;
+            font-size: 0.9em;
+            text-transform: uppercase;
+        }
+
+        .info-item p {
+            color: #666;
+            font-size: 1.3em;
+            font-weight: bold;
+        }
+
+        .legend {
+            display: flex;
+            justify-content: center;
+            gap: 20px;
+            margin-top: 25px;
+            flex-wrap: wrap;
+        }
+
+        .legend-item {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .legend-box {
+            width: 25px;
+            height: 25px;
+            border-radius: 5px;
+            border: 2px solid #ddd;
+        }
+
+        .status {
+            text-align: center;
+            font-size: 1.2em;
+            color: #333;
+            margin-top: 20px;
+            padding: 15px;
+            background: #f8f9fa;
+            border-radius: 10px;
+            font-weight: 600;
+        }
+
+        .status.success {
+            background: #d4edda;
+            color: #155724;
+        }
+
+        .status.error {
+            background: #f8d7da;
+            color: #721c24;
+        }
+    </style>
+</head>
+
+<body>
+    <div class="container">
+        <h1>🐍 Visualisation de l'algorithme BFS</h1>
+        <p class="subtitle">Recherche du chemin le plus court vers la pomme</p>
+
+        <div class="grid-container">
+            <div class="grid" id="grid"></div>
+        </div>
+
+        <div class="controls">
+            <button class="btn-start" onclick="startBFS()">▶️ Démarrer</button>
+            <button class="btn-step" onclick="stepBFS()">⏭️ Étape suivante</button>
+            <button class="btn-reset" onclick="resetGrid()">🔄 Réinitialiser</button>
+            <button class="btn-speed" onclick="toggleSpeed()">⚡ Vitesse: <span id="speedText">Normale</span></button>
+        </div>
+
+        <div class="info">
+            <div class="info-item">
+                <h3>Niveau actuel</h3>
+                <p id="currentLevel">0</p>
+            </div>
+            <div class="info-item">
+                <h3>Cases explorées</h3>
+                <p id="visitedCount">0</p>
+            </div>
+            <div class="info-item">
+                <h3>File d'attente</h3>
+                <p id="queueSize">0</p>
+            </div>
+            <div class="info-item">
+                <h3>Direction trouvée</h3>
+                <p id="direction">-</p>
+            </div>
+        </div>
+
+        <div class="legend">
+            <div class="legend-item">
+                <div class="legend-box" style="background: #2ecc71;"></div>
+                <span>Tête du serpent</span>
+            </div>
+            <div class="legend-item">
+                <div class="legend-box" style="background: #27ae60;"></div>
+                <span>Corps du serpent</span>
+            </div>
+            <div class="legend-item">
+                <div class="legend-box" style="background: #e74c3c;"></div>
+                <span>🍎 Pomme</span>
+            </div>
+            <div class="legend-item">
+                <div class="legend-box" style="background: #f39c12;"></div>
+                <span>En exploration</span>
+            </div>
+            <div class="legend-item">
+                <div class="legend-box" style="background: #3498db;"></div>
+                <span>Visité</span>
+            </div>
+            <div class="legend-item">
+                <div class="legend-box" style="background: #9b59b6;"></div>
+                <span>Chemin final</span>
+            </div>
+        </div>
+
+        <div class="status" id="status">Prêt à démarrer l'algorithme BFS</div>
+    </div>
+
+    <script>
+        const GRID_WIDTH = 12;
+        const GRID_HEIGHT = 10;
+        const MAX_DEPTH = 5;
+
+        let grid = [];
+        let queue = [];
+        let visited = new Set();
+        let isRunning = false;
+        let speed = 500; // ms
+        let stepMode = false;
+
+        // Position du serpent et de la pomme
+        const snake = {
+            head: { x: 2, y: 5 },
+            body: [{ x: 1, y: 5 }, { x: 0, y: 5 }]
+        };
+        const apple = { x: 2, y: 0 };
+
+        // Directions
+        const directions = [
+            { name: '↑ HAUT', dx: 0, dy: -1 },
+            { name: '↓ BAS', dx: 0, dy: 1 },
+            { name: '← GAUCHE', dx: -1, dy: 0 },
+            { name: '→ DROITE', dx: 1, dy: 0 }
+        ];
+
+        class PathNode {
+            constructor(x, y, firstDirection, depth = 0) {
+                this.x = x;
+                this.y = y;
+                this.firstDirection = firstDirection;
+                this.depth = depth;
+            }
+        }
+
+        function initGrid() {
+            const gridElement = document.getElementById('grid');
+            gridElement.innerHTML = '';
+            grid = [];
+
+            for (let y = 0; y < GRID_HEIGHT; y++) {
+                grid[y] = [];
+                for (let x = 0; x < GRID_WIDTH; x++) {
+                    const cell = document.createElement('div');
+                    cell.className = 'cell';
+                    cell.id = `cell-${x}-${y}`;
+                    gridElement.appendChild(cell);
+                    grid[y][x] = cell;
+                }
+            }
+
+            // Placer le serpent
+            updateCell(snake.head.x, snake.head.y, 'snake', '🐍');
+            snake.body.forEach(pos => {
+                updateCell(pos.x, pos.y, 'snake-body', '');
+            });
+
+            // Placer la pomme
+            updateCell(apple.x, apple.y, 'apple', '🍎');
+        }
+
+        function updateCell(x, y, className, content = '', depth = null) {
+            const cell = grid[y][x];
+            cell.className = `cell ${className}`;
+            let html = content;
+            if (depth !== null && depth > 0) {
+                html += `<span class="depth">${depth}</span>`;
+            }
+            cell.innerHTML = html;
+        }
+
+        function isValidPosition(x, y) {
+            if (x < 0 || x >= GRID_WIDTH || y < 0 || y >= GRID_HEIGHT) return false;
+            if (x === snake.head.x && y === snake.head.y) return false;
+            for (let pos of snake.body) {
+                if (x === pos.x && y === pos.y) return false;
+            }
+            return true;
+        }
+
+        function resetGrid() {
+            queue = [];
+            visited = new Set();
+            isRunning = false;
+            stepMode = false;
+            initGrid();
+            updateInfo();
+            updateStatus('Grille réinitialisée. Prêt à démarrer !');
+        }
+
+        function startBFS() {
+            if (isRunning) return;
+
+            resetGrid();
+            isRunning = true;
+            stepMode = false;
+
+            // Initialiser la file avec les premières directions possibles
+            for (let dir of directions) {
+                const nextX = snake.head.x + dir.dx;
+                const nextY = snake.head.y + dir.dy;
+
+                if (isValidPosition(nextX, nextY)) {
+                    const node = new PathNode(nextX, nextY, dir.name, 1);
+                    queue.push(node);
+                    visited.add(`${nextX},${nextY}`);
+                }
+            }
+
+            updateInfo();
+            updateStatus('BFS démarré ! Exploration en cours...');
+            runBFSLoop();
+        }
+
+        function stepBFS() {
+            if (!stepMode) {
+                resetGrid();
+                stepMode = true;
+
+                // Initialiser la file
+                for (let dir of directions) {
+                    const nextX = snake.head.x + dir.dx;
+                    const nextY = snake.head.y + dir.dy;
+
+                    if (isValidPosition(nextX, nextY)) {
+                        const node = new PathNode(nextX, nextY, dir.name, 1);
+                        queue.push(node);
+                        visited.add(`${nextX},${nextY}`);
+                    }
+                }
+                updateInfo();
+                updateStatus('Mode pas à pas activé');
+            }
+
+            if (queue.length > 0) {
+                processBFSStep();
+            }
+        }
+
+        async function runBFSLoop() {
+            while (isRunning && queue.length > 0) {
+                const found = await processBFSStep();
+                if (found) {
+                    isRunning = false;
+                    return;
+                }
+                await sleep(speed);
+            }
+
+            if (queue.length === 0 && isRunning) {
+                updateStatus('❌ Aucun chemin trouvé (limite de profondeur atteinte)', 'error');
+                isRunning = false;
+            }
+        }
+
+        async function processBFSStep() {
+            if (queue.length === 0) return false;
+
+            const node = queue.shift();
+
+            // Marquer comme en cours d'exploration
+            updateCell(node.x, node.y, 'exploring current', '', node.depth);
+            updateInfo();
+
+            await sleep(speed / 2);
+
+            // Vérifier si on a trouvé la pomme
+            if (node.x === apple.x && node.y === apple.y) {
+                updateCell(node.x, node.y, 'path apple', '🎯', node.depth);
+                document.getElementById('direction').textContent = node.firstDirection;
+                updateStatus(`✅ Chemin trouvé ! Direction: ${node.firstDirection}`, 'success');
+                highlightPath(node);
+                return true;
+            }
+
+            // Marquer comme visité
+            updateCell(node.x, node.y, 'visited', '', node.depth);
+
+            // Explorer les voisins si pas trop profond
+            if (node.depth < MAX_DEPTH) {
+                for (let dir of directions) {
+                    const nextX = node.x + dir.dx;
+                    const nextY = node.y + dir.dy;
+                    const key = `${nextX},${nextY}`;
+
+                    if (isValidPosition(nextX, nextY) && !visited.has(key)) {
+                        const newNode = new PathNode(nextX, nextY, node.firstDirection, node.depth + 1);
+                        queue.push(newNode);
+                        visited.add(key);
+                    }
+                }
+            }
+
+            updateInfo();
+            return false;
+        }
+
+        function highlightPath(targetNode) {
+            // Cette fonction est simplifiée car nous ne gardons pas le chemin complet
+            // On met juste en évidence la direction trouvée
+            const dirObj = directions.find(d => d.name === targetNode.firstDirection);
+            if (dirObj) {
+                const firstX = snake.head.x + dirObj.dx;
+                const firstY = snake.head.y + dirObj.dy;
+                if (firstX !== apple.x || firstY !== apple.y) {
+                    updateCell(firstX, firstY, 'path', '⭐', 1);
+                }
+            }
+        }
+
+        function updateInfo() {
+            document.getElementById('currentLevel').textContent =
+                queue.length > 0 ? queue[0].depth : visited.size > 0 ? MAX_DEPTH : 0;
+            document.getElementById('visitedCount').textContent = visited.size;
+            document.getElementById('queueSize').textContent = queue.length;
+        }
+
+        function updateStatus(message, type = '') {
+            const statusElement = document.getElementById('status');
+            statusElement.textContent = message;
+            statusElement.className = `status ${type}`;
+        }
+
+        function toggleSpeed() {
+            if (speed === 500) {
+                speed = 200;
+                document.getElementById('speedText').textContent = 'Rapide';
+            } else if (speed === 200) {
+                speed = 1000;
+                document.getElementById('speedText').textContent = 'Lente';
+            } else {
+                speed = 500;
+                document.getElementById('speedText').textContent = 'Normale';
+            }
+        }
+
+        function sleep(ms) {
+            return new Promise(resolve => setTimeout(resolve, ms));
+        }
+
+        // Initialiser la grille au chargement
+        initGrid();
+        updateInfo();
+    </script>
+</body>
+
+</html>

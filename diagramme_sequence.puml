@@ -1,0 +1,113 @@
+@startuml Sequence_Start_AI_Game
+!theme plain
+skinparam sequenceMessageAlign center
+skinparam responseMessageBelowArrow true
+
+actor User as U
+participant "MenuView" as MV
+participant "GameController" as GC
+participant "DifficultyView" as DV
+participant "PlayerFactory" as PF
+participant "GameModel" as GM
+participant "GameView" as GV
+participant "Timer" as T
+participant "AIPlayer" as AI
+
+U -> MV : Click "Contre l'IA"
+activate MV
+MV -> GC : vsAIListener.actionPerformed()
+deactivate MV
+activate GC
+
+GC -> GC : showDifficultySelection()
+GC -> DV : showView("difficulty")
+activate DV
+DV --> U : Display difficulty options
+U -> DV : Select "Difficile"
+DV -> GC : hardListener.actionPerformed()
+deactivate DV
+
+GC -> GC : startAIGame(3)
+GC -> PF : createHumanPlayer("Joueur 1")
+activate PF
+create participant "HumanPlayer" as HP
+PF -> HP : new HumanPlayer("Joueur 1")
+PF --> GC : return player1
+deactivate PF
+
+GC -> PF : createAIPlayer(3)
+activate PF
+PF -> AI : new HardAI()
+PF --> GC : return player2
+deactivate PF
+
+GC -> GC : startGame(player1, player2)
+create GM
+GC -> GM : new GameModel()
+create GV
+GC -> GV : new GameView(gameModel)
+
+GC -> GM : addObserver(gameView)
+activate GM
+GM -> GM : observers.add(gameView)
+deactivate GM
+
+GC -> GM : initGame(player1, player2)
+activate GM
+GM -> GM : create snakes
+GM -> GM : generateNewApple()
+GM -> GM : running = true
+GM -> GV : notifyGameStateChange(PLAYING)
+activate GV
+GV -> GV : repaint()
+deactivate GV
+deactivate GM
+
+GC -> T : new Timer(100ms, updateAction)
+activate T
+GC -> T : start()
+
+loop Every 100ms while running
+    T -> GC : actionPerformed()
+    GC -> GM : update()
+    activate GM
+    
+    group Player Updates
+        GM -> HP : updateDirection(snake1, apple, width, height)
+        activate HP
+        HP -> HP : apply pending direction
+        HP --> GM : 
+        deactivate HP
+        
+        GM -> AI : updateDirection(snake2, apple, width, height)
+        activate AI
+        AI -> AI : calculateBestDirection()
+        AI -> AI : findPathToApple() [HardAI]
+        AI --> GM : set new direction
+        deactivate AI
+    end
+    
+    GM -> GM : snake1.move()
+    GM -> GM : snake2.move()
+    GM -> GV : notifySnakeMove()
+    activate GV
+    GV -> GV : repaint()
+    deactivate GV
+    
+    alt Apple eaten
+        GM -> GM : checkAppleCollisions()
+        GM -> GV : notifyAppleEaten(playerNumber)
+        GM -> GV : notifyScoreUpdate(score1, score2)
+    else Collision detected
+        GM -> GM : checkCollisions()
+        GM -> GV : notifyCollision(playerNumber)
+        GM -> GM : respawnSnake()
+    end
+    
+    deactivate GM
+end
+
+deactivate T
+deactivate GC
+
+@enduml

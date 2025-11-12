@@ -40,7 +40,7 @@ public class GameModel extends Observable implements Serializable {
         int unitSize = Helper.getUnitSize(boardWidth, boardHeight);
 
         // Initialiser les serpents
-        snake1 = new Snake(100, 100, Color.GREEN, Direction.RIGHT, unitSize);
+        snake1 = new Snake(190, 190, Color.GREEN, Direction.RIGHT, unitSize);
         snake2 = new Snake(400, 400, Color.BLUE, Direction.LEFT, unitSize);
 
         // Initialiser les scores
@@ -105,8 +105,10 @@ public class GameModel extends Observable implements Serializable {
 
         int unitSize = Helper.getUnitSize(boardWidth, boardHeight);
 
-        if (snake1.getHead().equals(apple) || (Math.abs(snake1.getHead().getX() - apple.getX()) < unitSize
-                && Math.abs(snake1.getHead().getY() - apple.getY()) < unitSize)) {
+        if (snake1.getHead().equals(apple)
+                || (Math.abs(snake1.getHead().getX() - apple.getX()) < unitSize
+                        && Math.abs(snake1.getHead().getY() - apple.getY()) < unitSize)) {
+            snake1.grow();
             player1Score++;
             notifyAppleEaten(player1.getName());
             notifyScoreUpdate(player1Score, player2Score);
